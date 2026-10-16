@@ -16,11 +16,13 @@ export const AI_PROVIDERS = {
     keyHelpUrl: 'https://aistudio.google.com/app/apikey',
     keyPlaceholder: 'AIzaSy...',
     models: [
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Recommended • Fast & Free)' },
+      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Recommended • Latest Free)' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
       { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
     ],
-    defaultModel: 'gemini-2.0-flash'
+    defaultModel: 'gemini-3.8-flash'
   },
   openrouter: {
     id: 'openrouter',
@@ -96,10 +98,14 @@ export function getAiSettings() {
         if (parsed.apiKey && !mergedKeys[parsed.provider]) {
           mergedKeys[parsed.provider] = parsed.apiKey;
         }
+        let model = parsed.model || AI_PROVIDERS[parsed.provider].defaultModel;
+        if (model === 'gemini-2.0-flash') {
+          model = 'gemini-3.8-flash';
+        }
         return {
           provider: parsed.provider,
           apiKey: mergedKeys[parsed.provider] || '',
-          model: parsed.model || AI_PROVIDERS[parsed.provider].defaultModel,
+          model,
           keys: mergedKeys
         };
       }
@@ -116,7 +122,7 @@ export function getAiSettings() {
   return {
     provider: 'gemini',
     apiKey: legacyKey,
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.8-flash',
     keys: {
       ...defaultKeys,
       gemini: legacyKey
@@ -512,10 +518,15 @@ function normalizeEffectData(data, userPrompt = '') {
    ======================================================== */
 
 // 1. Google Gemini API
-async function callGemini(prompt, apiKey, model = 'gemini-2.0-flash') {
+async function callGemini(prompt, apiKey, model = 'gemini-3.8-flash', retried = false) {
   if (!apiKey) throw new Error('Google Gemini API Key is missing. Please enter your API key in AI Settings.');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  let cleanModel = (model || 'gemini-3.8-flash').replace(/^models\//, '');
+  if (cleanModel === 'gemini-2.0-flash') {
+    cleanModel = 'gemini-3.8-flash';
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -533,6 +544,22 @@ async function callGemini(prompt, apiKey, model = 'gemini-2.0-flash') {
       const p = JSON.parse(errBody);
       if (p.error?.message) msg = p.error.message;
     } catch (_) {}
+
+    // Auto-detect and auto-upgrade if Google says model is deprecated/no longer available
+    if (!retried && (msg.includes('is no longer available') || msg.includes('not found') || msg.includes('404'))) {
+      const match = msg.match(/models\/([a-zA-Z0-9.-]+)/);
+      const suggestedModel = match ? match[1] : 'gemini-3.8-flash';
+      if (suggestedModel && suggestedModel !== cleanModel) {
+        console.warn(`[Keyflaw AI] Gemini model ${cleanModel} deprecated. Auto-migrating to ${suggestedModel}...`);
+        try {
+          const s = getAiSettings();
+          s.model = suggestedModel;
+          saveAiSettings(s);
+        } catch (_) {}
+        return await callGemini(prompt, apiKey, suggestedModel, true);
+      }
+    }
+
     throw new Error(msg);
   }
 
