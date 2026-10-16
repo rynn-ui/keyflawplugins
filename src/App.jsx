@@ -156,6 +156,8 @@ export default function App() {
   };
 
   const handleRemoveSuite = (suiteId) => {
+    const target = importedSuites.find((s) => s.suite?.id === suiteId);
+    const targetName = target?.suite?.name || target?.suite?.id || 'Suite';
     setImportedSuites((prev) => {
       const nextList = prev.filter((s) => s.suite?.id !== suiteId);
       if (suite?.id === suiteId) {
@@ -172,7 +174,7 @@ export default function App() {
       }
       return nextList;
     });
-    showToast('Suite removed from session', 'info');
+    showToast(`Deleted "${targetName}" from suites`, 'info');
   };
 
   const applySuiteData = (data) => {

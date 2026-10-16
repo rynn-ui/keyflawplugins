@@ -158,17 +158,17 @@ export function Header({
                           </span>
                         </div>
 
-                        {onRemoveSuite && importedSuites.length > 1 && (
+                        {onRemoveSuite && (
                           <button
                             type="button"
                             className="suite-item-remove-btn"
-                            title="Remove from session"
+                            title={`Delete "${s.suite?.name || s.suite?.id}"`}
                             onClick={(e) => {
                               e.stopPropagation();
                               onRemoveSuite(s.suite?.id);
                             }}
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={13} />
                           </button>
                         )}
                       </div>

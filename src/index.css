@@ -596,20 +596,30 @@ input[type="range"]::-moz-range-thumb {
 
 .suite-item-remove-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #71717a;
   padding: 4px;
-  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.1s;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+  margin-left: 6px;
 }
 
 .suite-item-remove-btn:hover {
   color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  transform: scale(1.08);
+}
+
+.suite-item-remove-btn:active {
+  transform: scale(0.92);
 }
 
 .suite-popover-actions {
