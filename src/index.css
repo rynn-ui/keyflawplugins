@@ -1607,6 +1607,26 @@ input[type="range"]::-moz-range-thumb {
   margin: 2px 0 0;
 }
 
+.ai-provider-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(139, 92, 246, 0.12);
+  color: #c084fc;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ai-provider-badge-btn:hover {
+  background: rgba(139, 92, 246, 0.22);
+  border-color: #8b5cf6;
+}
+
 .ai-provider-badge {
   background: rgba(16, 185, 129, 0.15);
   color: #34d399;
@@ -1627,8 +1647,9 @@ input[type="range"]::-moz-range-thumb {
 
 .ai-provider-toggle-group {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 @media (max-width: 480px) {
@@ -1639,15 +1660,16 @@ input[type="range"]::-moz-range-thumb {
 
 .ai-provider-option {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 8px 10px;
   background: #18181b;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: #ffffff;
   cursor: pointer;
   transition: all 0.12s ease;
+  width: 100%;
 }
 
 .ai-provider-option:hover {
@@ -1656,8 +1678,43 @@ input[type="range"]::-moz-range-thumb {
 
 .ai-provider-option.active {
   border-color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.1);
+  background: rgba(139, 92, 246, 0.12);
   box-shadow: 0 0 0 1px #8b5cf6;
+}
+
+.badge-key-ready {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.badge-key-needed {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.ai-provider-form-panel {
+  background: #18181b;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.ai-key-warning-card {
+  padding: 10px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .ai-tabs-bar {

@@ -12,10 +12,15 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  Cpu
+  Key,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 
 import { 
+  AI_PROVIDERS,
   getAiSettings, 
   saveAiSettings, 
   generateNewEffect, 
@@ -50,16 +55,29 @@ export function AiStudioModal({
   const [showCodePreview, setShowCodePreview] = useState(false);
 
   // Settings State
-  const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(getAiSettings());
-  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [activeProvider, setActiveProvider] = useState(settings.provider || 'gemini');
+  const [activeModel, setActiveModel] = useState(settings.model || AI_PROVIDERS.gemini.defaultModel);
+  const [providerKeys, setProviderKeys] = useState(settings.keys || {});
+  const [showKey, setShowKey] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       const s = getAiSettings();
       setSettings(s);
-      setApiKeyInput(s.geminiApiKey || '');
+      setActiveProvider(s.provider || 'gemini');
+      setActiveModel(s.model || AI_PROVIDERS[s.provider || 'gemini']?.defaultModel || '');
+      setProviderKeys(s.keys || {});
       setErrorMessage(null);
+
+      // If user has no API key set for the selected provider, open settings drawer automatically
+      const currentKey = s.keys?.[s.provider || 'gemini'] || s.apiKey || '';
+      if (!currentKey) {
+        setShowSettings(true);
+      } else {
+        setShowSettings(false);
+      }
 
       if (shaderError) {
         setMode('fix');
@@ -71,7 +89,7 @@ export function AiStudioModal({
     }
   }, [isOpen, shaderError, activeEffect, initialMode]);
 
-  // Animated loading messages
+  // Loading animation step
   useEffect(() => {
     let interval;
     if (isGenerating) {
@@ -84,6 +102,10 @@ export function AiStudioModal({
 
   if (!isOpen) return null;
 
+  const currentProviderConfig = AI_PROVIDERS[activeProvider] || AI_PROVIDERS.gemini;
+  const currentKey = providerKeys[activeProvider] || '';
+  const hasKeyConfigured = Boolean(currentKey && currentKey.trim().length > 0);
+
   const loadingMessages = [
     'Synthesizing real-time GLSL algorithm...',
     'Declaring parameter uniforms & slider limits...',
@@ -91,18 +113,44 @@ export function AiStudioModal({
     'Finalizing Keyflaw WebGL package...'
   ];
 
+  const handleProviderSelect = (providerId) => {
+    setActiveProvider(providerId);
+    const provConfig = AI_PROVIDERS[providerId];
+    if (provConfig) {
+      setActiveModel(provConfig.defaultModel);
+    }
+  };
+
+  const handleKeyChange = (value) => {
+    setProviderKeys((prev) => ({
+      ...prev,
+      [activeProvider]: value
+    }));
+  };
+
   const handleSaveSettings = () => {
-    const next = {
-      ...settings,
-      geminiApiKey: apiKeyInput.trim()
+    const updated = {
+      provider: activeProvider,
+      model: activeModel,
+      apiKey: providerKeys[activeProvider] || '',
+      keys: {
+        ...providerKeys
+      }
     };
-    setSettings(next);
-    saveAiSettings(next);
+    setSettings(updated);
+    saveAiSettings(updated);
     setShowSettings(false);
   };
 
   const handleGenerate = async () => {
     if (mode !== 'fix' && !prompt.trim()) return;
+
+    if (!hasKeyConfigured) {
+      setShowSettings(true);
+      setErrorMessage(`Please enter your ${currentProviderConfig.name} API key below to proceed.`);
+      return;
+    }
+
     setIsGenerating(true);
     setErrorMessage(null);
     setGeneratedEffect(null);
@@ -137,12 +185,16 @@ export function AiStudioModal({
     onClose();
   };
 
+  // Human-readable model label
+  const selectedModelObj = currentProviderConfig.models?.find((m) => m.id === activeModel);
+  const activeModelLabel = selectedModelObj ? selectedModelObj.name.split(' (')[0] : activeModel;
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div 
         className="modal-content ai-studio-modal" 
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '640px' }}
+        style={{ maxWidth: '660px' }}
       >
         {/* Modal Header */}
         <div className="ai-modal-header">
@@ -151,13 +203,20 @@ export function AiStudioModal({
               <Sparkles size={16} color="#ffffff" />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h3 className="ai-header-title">KEYFLAW AI STUDIO</h3>
-                <span className="ai-provider-badge">
-                  {settings.provider === 'gemini' && settings.geminiApiKey ? 'Gemini 2.0 Free' : 'Free AI Active'}
-                </span>
+                <button
+                  type="button"
+                  className="ai-provider-badge-btn"
+                  onClick={() => setShowSettings(!showSettings)}
+                  title="Click to configure AI Provider or API Key"
+                >
+                  <Zap size={10} color="#a855f7" />
+                  <span>{currentProviderConfig.name}: {activeModelLabel}</span>
+                  <ChevronDown size={10} style={{ opacity: 0.6 }} />
+                </button>
               </div>
-              <p className="ai-header-sub">Author and modify real-time WebGL shaders with natural language</p>
+              <p className="ai-header-sub">API-powered WebGL shader synthesis (Gemini, Claude, Grok, OpenAI & OpenRouter)</p>
             </div>
           </div>
 
@@ -166,7 +225,7 @@ export function AiStudioModal({
               type="button"
               className={`btn btn-sm btn-icon-only ${showSettings ? 'badge-active' : 'btn-ghost'}`}
               onClick={() => setShowSettings(!showSettings)}
-              title="AI Provider Settings"
+              title="API Provider & Key Settings"
             >
               <Settings size={15} />
             </button>
@@ -181,69 +240,137 @@ export function AiStudioModal({
           </div>
         </div>
 
-        {/* Expandable Settings Drawer */}
+        {/* Expandable Provider & API Key Settings Drawer */}
         {showSettings && (
           <div className="ai-settings-drawer">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff' }}>AI Provider Configuration</span>
-              <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 500 }}>100% Free Forever</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Key size={13} color="#a855f7" />
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff' }}>Select AI Provider & API Key</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: '#10b981' }}>
+                <ShieldCheck size={12} />
+                <span>Saved locally in browser</span>
+              </div>
             </div>
 
+            {/* Provider Grid */}
             <div className="ai-provider-toggle-group">
-              <button
-                type="button"
-                className={`ai-provider-option ${settings.provider === 'free' ? 'active' : ''}`}
-                onClick={() => setSettings({ ...settings, provider: 'free' })}
-              >
-                <Cpu size={14} />
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600 }}>Built-in Free AI</div>
-                  <div style={{ fontSize: '9px', color: 'var(--fg-muted)' }}>Zero-setup public inference • Ready instantly</div>
-                </div>
-              </button>
+              {Object.values(AI_PROVIDERS).map((p) => {
+                const isSelected = activeProvider === p.id;
+                const hasProvKey = Boolean(providerKeys[p.id]?.trim());
 
-              <button
-                type="button"
-                className={`ai-provider-option ${settings.provider === 'gemini' ? 'active' : ''}`}
-                onClick={() => setSettings({ ...settings, provider: 'gemini' })}
-              >
-                <Sparkles size={14} color="#8b5cf6" />
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 600 }}>Google Gemini Free Tier</div>
-                  <div style={{ fontSize: '9px', color: 'var(--fg-muted)' }}>Sub-second speed • 1,500 requests/day free</div>
-                </div>
-              </button>
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`ai-provider-option ${isSelected ? 'active' : ''}`}
+                    onClick={() => handleProviderSelect(p.id)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600 }}>{p.name}</span>
+                      {hasProvKey ? (
+                        <span className="badge-key-ready">Ready</span>
+                      ) : (
+                        <span className="badge-key-needed">No Key</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--fg-muted)', marginTop: '2px', textAlign: 'left' }}>
+                      {p.tag}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            {settings.provider === 'gemini' && (
-              <div style={{ marginTop: '10px' }}>
-                <label style={{ fontSize: '11px', color: 'var(--fg-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Gemini API Key (Saved locally in your browser):
+            {/* Selected Provider Form */}
+            <div className="ai-provider-form-panel">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--fg-secondary)', fontWeight: 600 }}>
+                  {currentProviderConfig.name} Model:
                 </label>
+              </div>
+
+              <select
+                className="input-select"
+                value={activeModel}
+                onChange={(e) => setActiveModel(e.target.value)}
+                style={{ width: '100%', marginBottom: '10px', fontSize: '12px' }}
+              >
+                {currentProviderConfig.models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+
+              <label style={{ fontSize: '11px', color: 'var(--fg-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                {currentProviderConfig.name} API Key:
+              </label>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                 <input
-                  type="password"
+                  type={showKey ? 'text' : 'password'}
                   className="input-text"
-                  placeholder="Paste your Gemini API key (AIzaSy...)"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  style={{ width: '100%', fontSize: '12px', marginBottom: '6px' }}
+                  placeholder={currentProviderConfig.keyPlaceholder}
+                  value={currentKey}
+                  onChange={(e) => handleKeyChange(e.target.value)}
+                  style={{ flex: 1, fontSize: '12px' }}
                 />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost btn-icon-only"
+                  onClick={() => setShowKey(!showKey)}
+                  title={showKey ? 'Hide key' : 'Show key'}
+                >
+                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                 <a
-                  href="https://aistudio.google.com/app/apikey"
+                  href={currentProviderConfig.keyHelpUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ fontSize: '10px', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '3px', textDecoration: 'none' }}
+                  style={{ fontSize: '11px', color: '#60a5fa', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
                 >
-                  <span>Get your 100% free Gemini API key at Google AI Studio</span>
-                  <ExternalLink size={10} />
+                  <span>Get {currentProviderConfig.name} API key</span>
+                  <ExternalLink size={11} />
                 </a>
-              </div>
-            )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-              <button className="btn btn-sm btn-primary" onClick={handleSaveSettings}>
-                <Check size={12} />
-                <span>Save Settings</span>
+                <button 
+                  type="button"
+                  className="btn btn-sm btn-primary" 
+                  onClick={handleSaveSettings}
+                  style={{ padding: '0 14px' }}
+                >
+                  <Check size={12} />
+                  <span>Save Provider</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* API Key Gate Banner if user has not yet configured key */}
+        {!hasKeyConfigured && !showSettings && (
+          <div className="ai-key-warning-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Key size={16} color="#f59e0b" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#f59e0b' }}>
+                  {currentProviderConfig.name} API Key Required
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--fg-secondary)', marginTop: '2px' }}>
+                  To synthesize shaders directly in your browser, enter your free Gemini, Claude, Grok, or OpenRouter API key.
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-primary"
+                onClick={() => setShowSettings(true)}
+              >
+                Enter Key
               </button>
             </div>
           </div>

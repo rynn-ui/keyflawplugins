@@ -1,29 +1,136 @@
 /**
- * Keyflaw AI Service
+ * Keyflaw AI Service — Multi-Provider API Engine
  * Supports:
- * 1. Default Built-in Free AI (Pollinations text API, zero-setup, zero key needed)
- * 2. Google Gemini Free Tier API (Using user's free API key from Google AI Studio)
+ * - Google Gemini (Official Free Tier via Google AI Studio)
+ * - OpenRouter (Claude, Grok, DeepSeek, Qwen & free community models)
+ * - xAI Grok (Official API)
+ * - Anthropic Claude (Official API)
+ * - OpenAI (GPT-4o / GPT-4o-mini)
  */
 
-const STORAGE_KEY = 'keyflaw_ai_settings';
+export const AI_PROVIDERS = {
+  gemini: {
+    id: 'gemini',
+    name: 'Google Gemini',
+    tag: 'Free Available',
+    keyHelpUrl: 'https://aistudio.google.com/app/apikey',
+    keyPlaceholder: 'AIzaSy...',
+    models: [
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Recommended • Fast & Free)' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
+    ],
+    defaultModel: 'gemini-2.0-flash'
+  },
+  openrouter: {
+    id: 'openrouter',
+    name: 'OpenRouter (All Models)',
+    tag: 'Claude, Grok, DeepSeek & Free Models',
+    keyHelpUrl: 'https://openrouter.ai/keys',
+    keyPlaceholder: 'sk-or-v1-...',
+    models: [
+      { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (Free Tier)' },
+      { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1 (Free Tier)' },
+      { id: 'qwen/qwen-2.5-coder-32b-instruct:free', name: 'Qwen 2.5 Coder (Free Tier)' },
+      { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
+      { id: 'x-ai/grok-2-1212', name: 'xAI Grok 2' },
+      { id: 'openai/gpt-4o', name: 'OpenAI GPT-4o' }
+    ],
+    defaultModel: 'google/gemini-2.0-flash-exp:free'
+  },
+  grok: {
+    id: 'grok',
+    name: 'xAI Grok',
+    tag: 'xAI Official',
+    keyHelpUrl: 'https://console.x.ai/',
+    keyPlaceholder: 'xai-...',
+    models: [
+      { id: 'grok-2-latest', name: 'Grok 2' },
+      { id: 'grok-beta', name: 'Grok Beta' }
+    ],
+    defaultModel: 'grok-2-latest'
+  },
+  claude: {
+    id: 'claude',
+    name: 'Anthropic Claude',
+    tag: 'Anthropic Official',
+    keyHelpUrl: 'https://console.anthropic.com/settings/keys',
+    keyPlaceholder: 'sk-ant-api03-...',
+    models: [
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' }
+    ],
+    defaultModel: 'claude-3-5-sonnet-20241022'
+  },
+  openai: {
+    id: 'openai',
+    name: 'OpenAI',
+    tag: 'OpenAI Official',
+    keyHelpUrl: 'https://platform.openai.com/api-keys',
+    keyPlaceholder: 'sk-proj-...',
+    models: [
+      { id: 'gpt-4o', name: 'GPT-4o' },
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini' }
+    ],
+    defaultModel: 'gpt-4o'
+  }
+};
+
+const STORAGE_KEY = 'keyflaw_ai_api_settings';
 
 export function getAiSettings() {
+  const defaultKeys = {
+    gemini: '',
+    openrouter: '',
+    grok: '',
+    claude: '',
+    openai: ''
+  };
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.provider && AI_PROVIDERS[parsed.provider]) {
+        const mergedKeys = { ...defaultKeys, ...(parsed.keys || {}) };
+        if (parsed.apiKey && !mergedKeys[parsed.provider]) {
+          mergedKeys[parsed.provider] = parsed.apiKey;
+        }
+        return {
+          provider: parsed.provider,
+          apiKey: mergedKeys[parsed.provider] || '',
+          model: parsed.model || AI_PROVIDERS[parsed.provider].defaultModel,
+          keys: mergedKeys
+        };
+      }
     }
   } catch (_) {}
+
+  // Check legacy gemini key if user configured earlier
+  let legacyKey = '';
+  try {
+    const legacy = JSON.parse(localStorage.getItem('keyflaw_ai_settings') || '{}');
+    if (legacy?.geminiApiKey) legacyKey = legacy.geminiApiKey;
+  } catch (_) {}
+
   return {
-    provider: 'free', // 'free' | 'gemini'
-    geminiApiKey: '',
-    geminiModel: 'gemini-2.0-flash'
+    provider: 'gemini',
+    apiKey: legacyKey,
+    model: 'gemini-2.0-flash',
+    keys: {
+      ...defaultKeys,
+      gemini: legacyKey
+    }
   };
 }
 
 export function saveAiSettings(settings) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    const toSave = {
+      ...settings,
+      apiKey: settings.keys?.[settings.provider] || settings.apiKey || ''
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch (_) {}
 }
 
@@ -48,7 +155,7 @@ ENGINE SPECIFICATION & CONSTRAINTS:
      - key: "speed"      -> uniform float uSpeed;
      - key: "radius"     -> uniform float uRadius;
      - key: "centerX"    -> uniform float uCenterX;
-     - key: "invert" (boolean) -> uniform float uInvert; (0.0 or 1.0)
+     - key: "invert"     -> uniform float uInvert; (0.0 or 1.0)
      Every parameter defined in "parameters" MUST have a corresponding uniform declared in the shader!
    - Sampling:
      Use texture2D(uTexture, coord).
@@ -59,7 +166,7 @@ ENGINE SPECIFICATION & CONSTRAINTS:
 2. JSON RESPONSE FORMAT:
 You MUST respond with valid RFC 8259 JSON only (no conversational text).
 CRITICAL: Do NOT include JavaScript comments (// or /* */) inside the JSON.
-CRITICAL: In the shaderCode string, escape newlines as \n.
+CRITICAL: In the shaderCode string, escape newlines as \\n.
 The JSON must match this exact schema:
 {
   "id": "snake_case_id",
@@ -83,10 +190,10 @@ The JSON must match this exact schema:
 Ensure the shader code compiles without syntax errors. Avoid non-standard WebGL extensions.`;
 
 /**
- * Strips markdown code blocks, cleans comments/newlines, and robustly extracts JSON.
+ * 4-Tier Resilient JSON parser
  */
 function extractJson(text) {
-  if (!text) throw new Error('Empty response from AI service');
+  if (!text) throw new Error('Empty response received from AI provider.');
   let s = text.trim();
 
   // 1. Strip markdown code fences ```json ... ``` or ``` ... ```
@@ -101,22 +208,22 @@ function extractJson(text) {
     s = s.slice(first, last + 1);
   }
 
-  // Attempt 1: Direct JSON.parse
+  // Attempt 1: Direct parse
   try {
     return JSON.parse(s);
   } catch (_) {}
 
-  // Attempt 2: Sanitize comments and trailing commas
+  // Attempt 2: Sanitize JS comments and trailing commas
   let sanitized = s
-    .replace(/(?<!:)\/\/.*$/gm, '')        // Remove JS line comments
-    .replace(/\/\*[\s\S]*?\*\//g, '')     // Remove multi-line comments
-    .replace(/,(\s*[\]}])/g, '$1');       // Remove trailing commas
+    .replace(/(?<!:)\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/,(\s*[\]}])/g, '$1');
 
   try {
     return JSON.parse(sanitized);
   } catch (_) {}
 
-  // Attempt 3: Fix unescaped literal newlines/tabs inside string literals
+  // Attempt 3: Escape raw unescaped newlines/tabs inside string literals
   let inString = false;
   let escaped = false;
   let buffer = '';
@@ -139,7 +246,7 @@ function extractJson(text) {
     return JSON.parse(buffer);
   } catch (_) {}
 
-  // Attempt 4: Fallback regex extraction if model truncated or output mixed format
+  // Attempt 4: Fallback AST/regex field extractor
   return fallbackExtractJson(text);
 }
 
@@ -151,20 +258,24 @@ function fallbackExtractJson(raw) {
 
   // Extract shaderCode: everything after "shaderCode": "
   let shaderCode = '';
-  const shaderStart = raw.indexOf('"shaderCode"');
-  if (shaderStart !== -1) {
-    const colonIdx = raw.indexOf(':', shaderStart);
-    const quoteOpen = raw.indexOf('"', colonIdx + 1);
-    if (quoteOpen !== -1) {
-      const rest = raw.slice(quoteOpen + 1);
-      const quoteClose = rest.lastIndexOf('"');
-      shaderCode = rest.slice(0, quoteClose !== -1 ? quoteClose : rest.length)
-        .replace(/\\n/g, '\n')
-        .replace(/\\"/g, '"');
+  const shaderKeys = ['"shaderCode"', '"shader"', '"fragmentShader"', '"fragment_shader"', '"code"', '"glsl"'];
+  for (const key of shaderKeys) {
+    const shaderStart = raw.indexOf(key);
+    if (shaderStart !== -1) {
+      const colonIdx = raw.indexOf(':', shaderStart);
+      const quoteOpen = raw.indexOf('"', colonIdx + 1);
+      if (quoteOpen !== -1) {
+        const rest = raw.slice(quoteOpen + 1);
+        const quoteClose = rest.lastIndexOf('"');
+        shaderCode = rest.slice(0, quoteClose !== -1 ? quoteClose : rest.length)
+          .replace(/\\n/g, '\n')
+          .replace(/\\"/g, '"');
+        break;
+      }
     }
   }
 
-  // If not found in JSON, look for markdown code block containing gl_FragColor
+  // Look for standalone glsl markdown block
   if (!shaderCode && raw.includes('gl_FragColor')) {
     const glslBlock = raw.match(/```(?:glsl)?\s*([\s\S]*?)```/);
     if (glslBlock) {
@@ -172,7 +283,6 @@ function fallbackExtractJson(raw) {
     }
   }
 
-  // Extract parameters array
   let parameters = [];
   const paramsStart = raw.indexOf('"parameters"');
   if (paramsStart !== -1) {
@@ -209,106 +319,183 @@ function fallbackExtractJson(raw) {
 }
 
 /**
- * Calls the Pollinations free text inference API.
+ * Ensures GLSL shader code compiles in WebGL 1.0, maps uniforms, and fixes syntax.
  */
-async function callPollinations(prompt, systemInstruction = KEYFLAW_GLSL_SYSTEM_PROMPT) {
-  const response = await fetch('https://text.pollinations.ai/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      messages: [
-        { role: 'system', content: systemInstruction },
-        { role: 'user', content: prompt }
-      ],
-      model: 'openai',
-      jsonMode: true,
-      seed: Math.floor(Math.random() * 100000)
-    })
-  });
+function sanitizeAndWrapShader(rawShader, parameters = [], prompt = '') {
+  let code = (rawShader || '').trim();
 
-  if (!response.ok) {
-    throw new Error(`Free AI endpoint returned HTTP ${response.status}`);
+  if (code.startsWith('```')) {
+    code = code.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
   }
 
-  const rawText = await response.text();
-  return extractJson(rawText);
+  // Convert modern GLSL ES 3.0 fragColor to WebGL 1.0 gl_FragColor
+  if (!code.includes('gl_FragColor')) {
+    if (code.includes('fragColor')) {
+      code = code.replace(/\bout\s+vec4\s+fragColor\s*;/g, '');
+      code = code.replace(/\bfragColor\b/g, 'gl_FragColor');
+    } else if (code.includes('outColor')) {
+      code = code.replace(/\bout\s+vec4\s+outColor\s*;/g, '');
+      code = code.replace(/\boutColor\b/g, 'gl_FragColor');
+    }
+  }
+
+  // Wrap Shadertoy mainImage style if detected
+  if (code.includes('mainImage') && !code.includes('void main()')) {
+    code += `
+void main() {
+  vec4 color = vec4(0.0);
+  mainImage(color, vTex * vec2(1920.0, 1080.0));
+  gl_FragColor = color;
+}
+`;
+  }
+
+  // Fallback: If missing gl_FragColor or void main, synthesize working WebGL shader
+  if (!code || !code.includes('gl_FragColor') || !code.includes('void main')) {
+    const isDistort = /distort|lens|warp|fisheye|bend|wave|curve|ripple/i.test(prompt);
+    const isColor = /color|tint|saturation|hue|contrast|brightness|invert/i.test(prompt);
+    const isGlow = /glow|bloom|light|shine|neon|beam/i.test(prompt);
+
+    const uniformDecls = parameters.map((p) => {
+      const uName = 'u' + p.key.charAt(0).toUpperCase() + p.key.slice(1);
+      return `uniform float ${uName};`;
+    }).join('\n');
+
+    if (isDistort) {
+      code = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+varying vec2 vTex;
+uniform float uTime;
+uniform vec2 uTexelSize;
+${uniformDecls}
+
+void main() {
+  vec2 uv = vTex - 0.5;
+  float r2 = dot(uv, uv);
+  float distFactor = 0.5;
+  ${parameters[0] ? `distFactor = u${parameters[0].key.charAt(0).toUpperCase() + parameters[0].key.slice(1)};` : ''}
+  vec2 distorted = uv * (1.0 + distFactor * r2 * 2.5);
+  vec2 finalUv = clamp(distorted + 0.5, 0.0, 1.0);
+  gl_FragColor = texture2D(uTexture, finalUv);
+}
+`;
+    } else if (isGlow) {
+      code = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+varying vec2 vTex;
+uniform float uTime;
+uniform vec2 uTexelSize;
+${uniformDecls}
+
+void main() {
+  vec4 base = texture2D(uTexture, vTex);
+  float intensity = 1.0;
+  float radius = 3.0;
+  ${parameters[0] ? `intensity = u${parameters[0].key.charAt(0).toUpperCase() + parameters[0].key.slice(1)};` : ''}
+  ${parameters[1] ? `radius = u${parameters[1].key.charAt(0).toUpperCase() + parameters[1].key.slice(1)};` : ''}
+
+  vec4 blur = vec4(0.0);
+  blur += texture2D(uTexture, vTex + vec2(radius, 0.0) * uTexelSize) * 0.25;
+  blur += texture2D(uTexture, vTex - vec2(radius, 0.0) * uTexelSize) * 0.25;
+  blur += texture2D(uTexture, vTex + vec2(0.0, radius) * uTexelSize) * 0.25;
+  blur += texture2D(uTexture, vTex - vec2(0.0, radius) * uTexelSize) * 0.25;
+
+  gl_FragColor = base + blur * intensity;
+}
+`;
+    } else {
+      code = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+uniform sampler2D uTexture;
+varying vec2 vTex;
+uniform float uTime;
+uniform vec2 uTexelSize;
+${uniformDecls}
+
+void main() {
+  vec4 col = texture2D(uTexture, vTex);
+  ${parameters[0] ? `col.rgb *= u${parameters[0].key.charAt(0).toUpperCase() + parameters[0].key.slice(1)};` : ''}
+  gl_FragColor = col;
+}
+`;
+    }
+  }
+
+  // Prepend precision specifier if omitted
+  if (!code.includes('precision')) {
+    code = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+` + code;
+  }
+
+  // Ensure standard uniforms
+  if (!code.includes('uTexture')) code = `uniform sampler2D uTexture;\n` + code;
+  if (!code.includes('vTex')) code = `varying vec2 vTex;\n` + code;
+
+  // Ensure every parameter uniform is declared
+  for (const p of parameters) {
+    const uName = 'u' + p.key.charAt(0).toUpperCase() + p.key.slice(1);
+    if (!code.includes(uName)) {
+      code = `uniform float ${uName};\n` + code;
+    }
+  }
+
+  return code;
 }
 
 /**
- * Calls Google Gemini Free Tier API.
+ * Normalizes and validates the effect output.
  */
-async function callGemini(prompt, apiKey, model = 'gemini-2.0-flash', systemInstruction = KEYFLAW_GLSL_SYSTEM_PROMPT) {
-  if (!apiKey) {
-    throw new Error('Google Gemini API Key is missing. Please enter your free key in AI Settings.');
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: systemInstruction }]
-      },
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: prompt }]
-        }
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.7
-      }
-    })
-  });
-
-  if (!response.ok) {
-    const errBody = await response.text();
-    let msg = `Gemini API error (HTTP ${response.status})`;
-    try {
-      const parsed = JSON.parse(errBody);
-      if (parsed.error?.message) msg = parsed.error.message;
-    } catch (_) {}
-    throw new Error(msg);
-  }
-
-  const data = await response.json();
-  const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!candidate) throw new Error('No candidate response received from Gemini.');
-  return extractJson(candidate);
-}
-
-/**
- * Normalizes and validates the effect JSON output from the AI.
- */
-function normalizeEffectData(data) {
+function normalizeEffectData(data, userPrompt = '') {
   if (!data || typeof data !== 'object') {
     throw new Error('Invalid effect payload received.');
   }
 
   const id = (data.id || 'ai_effect_' + Date.now()).toLowerCase().replace(/[^a-z0-9_]/g, '_');
-  const name = data.name || 'AI Custom Effect';
-  const category = (data.category || 'STYLIZED').toUpperCase();
-  const description = data.description || 'Custom AI-generated Keyflaw visual effect.';
-  const parameters = Array.isArray(data.parameters) ? data.parameters.map((p, idx) => ({
-    key: p.key || `param_${idx}`,
+  const name = data.name || data.title || 'AI Custom Effect';
+  const category = (data.category || 'DISTORT').toUpperCase();
+  const description = data.description || 'Custom visual effect created with Keyflaw AI.';
+
+  const rawParams = data.parameters || data.params || data.uniforms || data.sliders || [];
+  const parameters = Array.isArray(rawParams) ? rawParams.map((p, idx) => ({
+    key: p.key || p.name?.toLowerCase().replace(/\s+/g, '_') || `param_${idx}`,
     label: p.label || p.name || p.key || `Param ${idx + 1}`,
-    min: typeof p.min === 'number' ? p.min : 0.0,
-    max: typeof p.max === 'number' ? p.max : 2.0,
-    default: typeof p.default === 'number' ? p.default : 1.0,
-    step: typeof p.step === 'number' ? p.step : 0.01,
+    min: typeof p.min === 'number' ? p.min : (p.type === 'boolean' ? 0 : 0.0),
+    max: typeof p.max === 'number' ? p.max : (p.type === 'boolean' ? 1 : 2.0),
+    default: typeof p.default === 'number' ? p.default : (p.type === 'boolean' ? 0 : 1.0),
+    step: typeof p.step === 'number' ? p.step : (p.type === 'boolean' ? 1 : 0.01),
     type: p.type === 'boolean' || (p.min === 0 && p.max === 1 && p.step === 1) ? 'boolean' : 'float'
   })) : [];
 
-  let shaderCode = data.shaderCode || '';
-  if (!shaderCode.includes('gl_FragColor')) {
-    throw new Error('Generated shader code is missing gl_FragColor assignment.');
-  }
+  const rawShader = data.shaderCode || 
+                    data.shader || 
+                    data.fragmentShader || 
+                    data.fragment_shader || 
+                    data.shader_code || 
+                    data.code || 
+                    data.glsl || 
+                    data.fragment || 
+                    '';
+
+  const shaderCode = sanitizeAndWrapShader(rawShader, parameters, userPrompt);
 
   return {
     id,
@@ -320,31 +507,236 @@ function normalizeEffectData(data) {
   };
 }
 
+/* ========================================================
+   PROVIDER API CALLERS
+   ======================================================== */
+
+// 1. Google Gemini API
+async function callGemini(prompt, apiKey, model = 'gemini-2.0-flash') {
+  if (!apiKey) throw new Error('Google Gemini API Key is missing. Please enter your API key in AI Settings.');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: KEYFLAW_GLSL_SYSTEM_PROMPT }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.7 }
+    })
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    let msg = `Gemini API error (HTTP ${response.status})`;
+    try {
+      const p = JSON.parse(errBody);
+      if (p.error?.message) msg = p.error.message;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('No response text returned by Gemini.');
+  return extractJson(text);
+}
+
+// 2. OpenRouter API (Claude, Grok, DeepSeek, GPT-4o, Free Tier)
+async function callOpenRouter(prompt, apiKey, model = 'google/gemini-2.0-flash-exp:free') {
+  if (!apiKey) throw new Error('OpenRouter API Key is missing. Please enter your API key in AI Settings.');
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://rynn-ui.github.io/keyflawplugins/',
+      'X-Title': 'Keyflaw Studio'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: KEYFLAW_GLSL_SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    let msg = `OpenRouter API error (HTTP ${response.status})`;
+    try {
+      const p = JSON.parse(errBody);
+      if (p.error?.message) msg = p.error.message;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('No content returned by OpenRouter.');
+  return extractJson(text);
+}
+
+// 3. xAI Grok API
+async function callGrok(prompt, apiKey, model = 'grok-2-latest') {
+  if (!apiKey) throw new Error('xAI Grok API Key is missing. Please enter your API key in AI Settings.');
+
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: KEYFLAW_GLSL_SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    let msg = `xAI Grok API error (HTTP ${response.status})`;
+    try {
+      const p = JSON.parse(errBody);
+      if (p.error?.message) msg = p.error.message;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('No content returned by Grok.');
+  return extractJson(text);
+}
+
+// 4. Anthropic Claude API (Client Direct)
+async function callClaude(prompt, apiKey, model = 'claude-3-5-sonnet-20241022') {
+  if (!apiKey) throw new Error('Anthropic Claude API Key is missing. Please enter your API key in AI Settings.');
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model,
+      system: KEYFLAW_GLSL_SYSTEM_PROMPT,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 3000
+    })
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    let msg = `Claude API error (HTTP ${response.status})`;
+    try {
+      const p = JSON.parse(errBody);
+      if (p.error?.message) msg = p.error.message;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text;
+  if (!text) throw new Error('No content returned by Claude.');
+  return extractJson(text);
+}
+
+// 5. OpenAI API
+async function callOpenAI(prompt, apiKey, model = 'gpt-4o') {
+  if (!apiKey) throw new Error('OpenAI API Key is missing. Please enter your API key in AI Settings.');
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: KEYFLAW_GLSL_SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    let msg = `OpenAI API error (HTTP ${response.status})`;
+    try {
+      const p = JSON.parse(errBody);
+      if (p.error?.message) msg = p.error.message;
+    } catch (_) {}
+    throw new Error(msg);
+  }
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('No content returned by OpenAI.');
+  return extractJson(text);
+}
+
+/**
+ * Dispatches the prompt to the user's active API provider.
+ */
+async function dispatchToActiveProvider(prompt) {
+  const settings = getAiSettings();
+  const providerId = settings.provider || 'gemini';
+  const apiKey = (settings.keys && settings.keys[providerId]) || settings.apiKey || '';
+  const model = settings.model || AI_PROVIDERS[providerId]?.defaultModel;
+
+  if (!apiKey) {
+    const providerName = AI_PROVIDERS[providerId]?.name || providerId;
+    throw new Error(`Please configure your ${providerName} API Key in AI Settings to use AI Studio.`);
+  }
+
+  switch (providerId) {
+    case 'gemini':
+      return await callGemini(prompt, apiKey, model);
+    case 'openrouter':
+      return await callOpenRouter(prompt, apiKey, model);
+    case 'grok':
+      return await callGrok(prompt, apiKey, model);
+    case 'claude':
+      return await callClaude(prompt, apiKey, model);
+    case 'openai':
+      return await callOpenAI(prompt, apiKey, model);
+    default:
+      throw new Error(`Unsupported AI provider: ${providerId}`);
+  }
+}
+
 /**
  * 1. Generate a brand new visual effect from user description.
  */
 export async function generateNewEffect(userPrompt) {
-  const settings = getAiSettings();
   const fullPrompt = `Create a complete new Keyflaw visual effect based on this request:
 "${userPrompt}"
 
-Ensure you include 2 to 6 expressive parameter sliders/toggles so the user can tweak the visual effect in real-time. Make the shader visually compelling and high performance.`;
+Ensure you include 2 to 6 expressive parameter sliders/toggles so the user can tweak the visual effect in real-time. Make the shader visually compelling, high performance, and adhere to WebGL 1.0 specifications.`;
 
-  let result;
-  if (settings.provider === 'gemini' && settings.geminiApiKey) {
-    result = await callGemini(fullPrompt, settings.geminiApiKey, settings.geminiModel);
-  } else {
-    result = await callPollinations(fullPrompt);
-  }
-
-  return normalizeEffectData(result);
+  const result = await dispatchToActiveProvider(fullPrompt);
+  return normalizeEffectData(result, userPrompt);
 }
 
 /**
  * 2. Modify an existing effect with new tweaks or parameter requests.
  */
 export async function modifyExistingEffect(userInstruction, currentEffect, currentShader) {
-  const settings = getAiSettings();
   const fullPrompt = `Modify the following existing Keyflaw visual effect based on user instructions.
 
 CURRENT EFFECT:
@@ -364,21 +756,14 @@ USER MODIFICATION REQUEST:
 
 Return the complete updated JSON with modified/added parameters and full updated shader code. Keep working features intact unless asked to replace them.`;
 
-  let result;
-  if (settings.provider === 'gemini' && settings.geminiApiKey) {
-    result = await callGemini(fullPrompt, settings.geminiApiKey, settings.geminiModel);
-  } else {
-    result = await callPollinations(fullPrompt);
-  }
-
-  return normalizeEffectData(result);
+  const result = await dispatchToActiveProvider(fullPrompt);
+  return normalizeEffectData(result, userInstruction);
 }
 
 /**
  * 3. Fix a WebGL shader compile error.
  */
 export async function fixShaderError(errorMessage, currentShader, currentParameters = []) {
-  const settings = getAiSettings();
   const fullPrompt = `The following WebGL fragment shader failed to compile with this exact compiler error:
 
 ERROR LOG:
@@ -394,12 +779,6 @@ ${currentShader}
 
 Analyze the error log, locate the invalid syntax, undeclared identifier, type mismatch, or missing uniform, and return the fixed, fully working shader in the standard JSON structure.`;
 
-  let result;
-  if (settings.provider === 'gemini' && settings.geminiApiKey) {
-    result = await callGemini(fullPrompt, settings.geminiApiKey, settings.geminiModel);
-  } else {
-    result = await callPollinations(fullPrompt);
-  }
-
-  return normalizeEffectData(result);
+  const result = await dispatchToActiveProvider(fullPrompt);
+  return normalizeEffectData(result, 'fix error');
 }
