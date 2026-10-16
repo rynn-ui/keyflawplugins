@@ -11,7 +11,8 @@ import {
   MoreVertical,
   Equal,
   Upload,
-  Package
+  Package,
+  Sparkles
 } from 'lucide-react';
 
 import { KeyflawRulerSlider } from './KeyflawRulerSlider';
@@ -46,7 +47,8 @@ export function ParameterSliders({
   paramValues = {},
   onChangeParam,
   onResetParams,
-  onImportSuiteFile
+  onImportSuiteFile,
+  onOpenAiStudio
 }) {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -124,14 +126,22 @@ export function ParameterSliders({
             Import a custom <code>.kfpack</code> visual effect suite to configure interactive parameter sliders.
           </p>
 
-          <button 
-            className="btn btn-primary"
-            onClick={() => emptyFileInputRef.current?.click()}
-            style={{ marginTop: '16px' }}
-          >
-            <Upload size={14} />
-            <span>Import .kfpack Suite</span>
-          </button>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button 
+              className="btn btn-outline"
+              onClick={() => emptyFileInputRef.current?.click()}
+            >
+              <Upload size={14} />
+              <span>Import .kfpack Suite</span>
+            </button>
+            <button 
+              className="btn btn-primary ai-generate-btn"
+              onClick={() => onOpenAiStudio?.('new')}
+            >
+              <Sparkles size={14} />
+              <span>Create with AI (Free)</span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -190,8 +200,17 @@ export function ParameterSliders({
               </h2>
             </div>
 
-            {/* Right: Actions (Eye, Chevron, Red Trash, Menu) */}
+            {/* Right: Actions (AI Tweak, Eye, Chevron, Red Trash, Menu) */}
             <div className="kf-card-actions">
+              {/* AI Tweak Button */}
+              <button
+                className="kf-icon-btn"
+                onClick={() => onOpenAiStudio?.('modify')}
+                title="Tweak this effect with AI"
+              >
+                <Sparkles size={18} color="#c084fc" />
+              </button>
+
               {/* Eye Toggle (Active/Bypass) */}
               <button
                 className={`kf-icon-btn ${!isBypassed ? 'text-blue' : 'text-muted'}`}

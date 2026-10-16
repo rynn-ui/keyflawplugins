@@ -3,7 +3,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
 import { StreamLanguage } from '@codemirror/language';
 import { c } from '@codemirror/legacy-modes/mode/clike';
-import { FileCode, AlertCircle, Check } from 'lucide-react';
+import { FileCode, AlertCircle, Check, Sparkles } from 'lucide-react';
 
 const glslLanguage = StreamLanguage.define(c);
 
@@ -13,7 +13,8 @@ export function CodeEditor({
   onChangeCode,
   lineErrors = [],
   openFiles = [],
-  onSelectFile
+  onSelectFile,
+  onOpenAiStudio
 }) {
   const isJson = activeFilePath?.endsWith('.json');
 
@@ -48,15 +49,39 @@ export function CodeEditor({
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
           {lineErrors.length > 0 ? (
-            <span className="badge" style={{ background: '#222222', color: '#ffffff' }}>
-              <AlertCircle size={10} />
-              <span>{lineErrors.length} ERRORS</span>
-            </span>
+            <>
+              <button
+                type="button"
+                className="btn btn-xs btn-outline"
+                style={{ borderColor: '#ef4444', color: '#f87171', gap: '4px' }}
+                onClick={() => onOpenAiStudio?.('fix')}
+                title="Automatically fix compile error with AI"
+              >
+                <Sparkles size={11} />
+                <span>Fix with AI</span>
+              </button>
+              <span className="badge" style={{ background: '#222222', color: '#ffffff' }}>
+                <AlertCircle size={10} />
+                <span>{lineErrors.length} ERRORS</span>
+              </span>
+            </>
           ) : (
-            <span className="badge" style={{ background: '#111111', color: 'var(--fg-secondary)' }}>
-              <Check size={10} />
-              <span>COMPILED</span>
-            </span>
+            <>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                style={{ color: '#c084fc', gap: '4px' }}
+                onClick={() => onOpenAiStudio?.('modify')}
+                title="Ask AI to modify this shader code"
+              >
+                <Sparkles size={11} />
+                <span>AI Edit</span>
+              </button>
+              <span className="badge" style={{ background: '#111111', color: 'var(--fg-secondary)' }}>
+                <Check size={10} />
+                <span>COMPILED</span>
+              </span>
+            </>
           )}
         </div>
       </div>

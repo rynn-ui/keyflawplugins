@@ -9,7 +9,8 @@ import {
   Plus,
   Check,
   Package,
-  Trash2
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 import logoImg from '../assets/keyflaw_logo.webp';
 
@@ -21,6 +22,7 @@ export function Header({
   onImportSuiteFile,
   onExportSuite,
   onOpenGuide,
+  onOpenAiStudio,
   activeLayout,
   onChangeLayout
 }) {
@@ -188,6 +190,19 @@ export function Header({
                   <span>Import .kfpack Suite</span>
                 </button>
 
+                <button
+                  type="button"
+                  className="suite-popover-export-btn"
+                  style={{ color: '#c084fc', borderColor: 'rgba(168, 85, 247, 0.3)' }}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    if (onOpenAiStudio) onOpenAiStudio('new');
+                  }}
+                >
+                  <Sparkles size={13} color="#a855f7" />
+                  <span>Generate Effect with AI (Free)</span>
+                </button>
+
                 {suite && (
                   <button
                     type="button"
@@ -237,7 +252,7 @@ export function Header({
         </button>
       </div>
 
-      {/* Actions: Import .kfpack & Export .kfpack */}
+      {/* Actions: AI Studio, Export, Guide */}
       <div className="header-actions">
         {/* Hidden file input for .kfpack import */}
         <input
@@ -247,6 +262,17 @@ export function Header({
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
+
+        {/* AI Studio Trigger Button */}
+        <button
+          type="button"
+          className="btn btn-sm header-ai-btn"
+          onClick={() => onOpenAiStudio?.('new')}
+          title="Keyflaw AI Studio — Author & tweak shaders with free AI"
+        >
+          <Sparkles size={13} />
+          <span>AI Studio</span>
+        </button>
 
         {/* Export Button (Always visible on Desktop and Mobile!) */}
         <button

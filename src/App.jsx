@@ -12,6 +12,7 @@ import { ParameterSliders } from './components/ParameterSliders';
 import { CodeEditor } from './components/CodeEditor';
 import { FileTree } from './components/FileTree';
 import { SuiteInfoModal } from './components/SuiteInfoModal';
+import { AiStudioModal } from './components/AiStudioModal';
 import { Toast } from './components/Toast';
 
 import { parseKfpack } from './services/PackParser';
@@ -441,6 +442,143 @@ export default function App() {
     }
   };
 
+  // 11. AI Studio State & Apply Handlers
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiModalMode, setAiModalMode] = useState('new');
+
+  const handleOpenAiStudio = (mode = 'new') => {
+    setAiModalMode(mode);
+    setIsAiModalOpen(true);
+  };
+
+  const handleApplyAiEffect = (effectData, applyMode) => {
+    if (!effectData) return;
+
+    if (applyMode === 'replace' && activeEffect) {
+      // 1. Replace/Update active effect
+      const updatedEff = {
+        ...activeEffect,
+        name: effectData.name || activeEffect.name,
+        category: effectData.category || activeEffect.category,
+        description: effectData.description || activeEffect.description,
+        parameters: effectData.parameters || activeEffect.parameters,
+        shaderCode: effectData.shaderCode || activeEffect.shaderCode
+      };
+
+      setEffects((prev) =>
+        prev.map((e) => (e.id === activeEffect.id ? updatedEff : e))
+      );
+
+      const newParams = {};
+      for (const p of updatedEff.parameters || []) {
+        newParams[p.key] = p.default !== undefined ? p.default : 0.0;
+      }
+      setParamValues(newParams);
+
+      const shaderPath = `effects/${activeEffect.id}/shader.glsl`;
+      const jsonPath = `effects/${activeEffect.id}/effect.json`;
+
+      setFiles((prev) => ({
+        ...prev,
+        [shaderPath]: updatedEff.shaderCode,
+        [jsonPath]: JSON.stringify({
+          id: activeEffect.id,
+          name: updatedEff.name,
+          category: updatedEff.category,
+          description: updatedEff.description,
+          parameters: updatedEff.parameters
+        }, null, 2)
+      }));
+
+      if (rendererRef.current && updatedEff.shaderCode) {
+        const res = rendererRef.current.setShaderSource(updatedEff.shaderCode);
+        setShaderError(res.error);
+        setLineErrors(res.lineErrors);
+      }
+
+      showToast(`✨ Updated "${updatedEff.name}" with AI changes!`);
+    } else {
+      // 2. Add as New Effect to current or new suite
+      const newId = effectData.id || `fx_${Date.now()}`;
+      const newEff = {
+        ...effectData,
+        id: newId
+      };
+
+      let currentSuite = suite;
+      if (!currentSuite) {
+        currentSuite = {
+          id: 'custom_ai_suite',
+          name: 'AI Effects Suite',
+          author: 'Keyflaw AI Creator',
+          description: 'Custom effects created with Keyflaw AI Studio',
+          version: '1.0.0',
+          effects: []
+        };
+        setSuite(currentSuite);
+      }
+
+      const updatedEffects = [...effects, newEff];
+      setEffects(updatedEffects);
+
+      const shaderPath = `effects/${newId}/shader.glsl`;
+      const jsonPath = `effects/${newId}/effect.json`;
+
+      const newFiles = {
+        ...files,
+        [shaderPath]: newEff.shaderCode,
+        [jsonPath]: JSON.stringify({
+          id: newId,
+          name: newEff.name,
+          category: newEff.category,
+          description: newEff.description,
+          parameters: newEff.parameters
+        }, null, 2),
+        'suite.json': JSON.stringify({
+          ...currentSuite,
+          effects: updatedEffects.map((e) => ({ id: e.id, name: e.name, category: e.category }))
+        }, null, 2)
+      };
+      setFiles(newFiles);
+
+      setImportedSuites((prev) => {
+        const suiteObj = {
+          suite: {
+            ...currentSuite,
+            effects: updatedEffects.map((e) => ({ id: e.id, name: e.name, category: e.category }))
+          },
+          effects: updatedEffects,
+          files: newFiles
+        };
+        const existingIdx = prev.findIndex((s) => s.suite?.id === currentSuite.id);
+        if (existingIdx >= 0) {
+          const list = [...prev];
+          list[existingIdx] = suiteObj;
+          return list;
+        }
+        return [...prev, suiteObj];
+      });
+
+      setActiveEffectId(newId);
+      setActiveFilePath(shaderPath);
+      setOpenFiles((prev) => [shaderPath, jsonPath, ...prev.filter((p) => p !== shaderPath && p !== jsonPath)]);
+
+      const initialParams = {};
+      for (const p of newEff.parameters || []) {
+        initialParams[p.key] = p.default !== undefined ? p.default : 0.0;
+      }
+      setParamValues(initialParams);
+
+      if (rendererRef.current && newEff.shaderCode) {
+        const res = rendererRef.current.setShaderSource(newEff.shaderCode);
+        setShaderError(res.error);
+        setLineErrors(res.lineErrors);
+      }
+
+      showToast(`✨ Added "${newEff.name}" to suite!`);
+    }
+  };
+
   // Viewport Props
   const viewportProps = {
     canvasRef,
@@ -470,7 +608,8 @@ export default function App() {
     paramValues,
     onChangeParam: handleChangeParam,
     onResetParams: handleResetParams,
-    onImportSuiteFile: handleImportKfpackFile
+    onImportSuiteFile: handleImportKfpackFile,
+    onOpenAiStudio: handleOpenAiStudio
   };
 
   // Global window drop handler for .kfpack files
@@ -502,6 +641,7 @@ export default function App() {
         onImportSuiteFile={handleImportKfpackFile}
         onExportSuite={handleExportSuite}
         onOpenGuide={() => setIsGuideOpen(true)}
+        onOpenAiStudio={handleOpenAiStudio}
         activeLayout={activeLayout}
         onChangeLayout={setActiveLayout}
       />
@@ -527,6 +667,7 @@ export default function App() {
                     lineErrors={lineErrors}
                     openFiles={openFiles}
                     onSelectFile={handleSelectFile}
+                    onOpenAiStudio={handleOpenAiStudio}
                   />
                 )}
 
@@ -613,6 +754,7 @@ export default function App() {
                 lineErrors={lineErrors}
                 openFiles={openFiles}
                 onSelectFile={handleSelectFile}
+                onOpenAiStudio={handleOpenAiStudio}
               />
             </div>
 
@@ -636,6 +778,17 @@ export default function App() {
         suite={suite}
         effects={effects}
         onExportSuite={handleExportSuite}
+      />
+
+      {/* Keyflaw AI Studio Modal (100% Free Built-in + Gemini) */}
+      <AiStudioModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        activeEffect={activeEffect}
+        currentShaderCode={activeEffect?.shaderCode || files[activeFilePath] || ''}
+        shaderError={shaderError}
+        onApplyEffect={handleApplyAiEffect}
+        initialMode={aiModalMode}
       />
 
       {/* Minimalist Floating Status Toast */}
