@@ -1804,7 +1804,12 @@ input[type="range"]::-moz-range-thumb {
   gap: 6px;
   overflow-x: auto;
   padding: 6px 0 2px;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ai-presets-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .ai-preset-chip {

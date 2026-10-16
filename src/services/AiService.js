@@ -16,13 +16,13 @@ export const AI_PROVIDERS = {
     keyHelpUrl: 'https://aistudio.google.com/app/apikey',
     keyPlaceholder: 'AIzaSy...',
     models: [
-      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Recommended • Latest Free)' },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Recommended • Fast & Stable Free)' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Ultra Reliable • High Capacity)' },
+      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Latest Preview)' },
       { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
     ],
-    defaultModel: 'gemini-3.8-flash'
+    defaultModel: 'gemini-2.5-flash'
   },
   openrouter: {
     id: 'openrouter',
@@ -122,7 +122,7 @@ export function getAiSettings() {
   return {
     provider: 'gemini',
     apiKey: legacyKey,
-    model: 'gemini-3.8-flash',
+    model: 'gemini-2.5-flash',
     keys: {
       ...defaultKeys,
       gemini: legacyKey
@@ -518,13 +518,16 @@ function normalizeEffectData(data, userPrompt = '') {
    ======================================================== */
 
 // 1. Google Gemini API
-async function callGemini(prompt, apiKey, model = 'gemini-3.8-flash', retried = false) {
+const GEMINI_STABLE_FALLBACKS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.8-flash'];
+
+async function callGemini(prompt, apiKey, model = 'gemini-2.5-flash', attemptedModels = new Set()) {
   if (!apiKey) throw new Error('Google Gemini API Key is missing. Please enter your API key in AI Settings.');
 
-  let cleanModel = (model || 'gemini-3.8-flash').replace(/^models\//, '');
+  let cleanModel = (model || 'gemini-2.5-flash').replace(/^models\//, '');
   if (cleanModel === 'gemini-2.0-flash') {
-    cleanModel = 'gemini-3.8-flash';
+    cleanModel = 'gemini-2.5-flash';
   }
+  attemptedModels.add(cleanModel);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const response = await fetch(url, {
@@ -545,18 +548,23 @@ async function callGemini(prompt, apiKey, model = 'gemini-3.8-flash', retried = 
       if (p.error?.message) msg = p.error.message;
     } catch (_) {}
 
-    // Auto-detect and auto-upgrade if Google says model is deprecated/no longer available
-    if (!retried && (msg.includes('is no longer available') || msg.includes('not found') || msg.includes('404'))) {
+    // Case 1: Model deprecated or not found (e.g. 404 or "is no longer available")
+    if (msg.includes('is no longer available') || msg.includes('not found') || msg.includes('404')) {
       const match = msg.match(/models\/([a-zA-Z0-9.-]+)/);
-      const suggestedModel = match ? match[1] : 'gemini-3.8-flash';
-      if (suggestedModel && suggestedModel !== cleanModel) {
-        console.warn(`[Keyflaw AI] Gemini model ${cleanModel} deprecated. Auto-migrating to ${suggestedModel}...`);
-        try {
-          const s = getAiSettings();
-          s.model = suggestedModel;
-          saveAiSettings(s);
-        } catch (_) {}
-        return await callGemini(prompt, apiKey, suggestedModel, true);
+      const suggestedModel = match ? match[1] : 'gemini-2.5-flash';
+      if (suggestedModel && !attemptedModels.has(suggestedModel)) {
+        console.warn(`[Keyflaw AI] Gemini model ${cleanModel} unavailable. Auto-migrating to ${suggestedModel}...`);
+        return await callGemini(prompt, apiKey, suggestedModel, attemptedModels);
+      }
+    }
+
+    // Case 2: High demand / overloaded / rate-limit / 503 / 429
+    const isHighDemand = msg.includes('high demand') || msg.includes('overloaded') || msg.includes('Resource has been exhausted') || response.status === 503 || response.status === 429;
+    if (isHighDemand) {
+      const nextFallback = GEMINI_STABLE_FALLBACKS.find((m) => !attemptedModels.has(m));
+      if (nextFallback) {
+        console.warn(`[Keyflaw AI] ${cleanModel} is experiencing high demand. Auto-falling back to ${nextFallback}...`);
+        return await callGemini(prompt, apiKey, nextFallback, attemptedModels);
       }
     }
 
