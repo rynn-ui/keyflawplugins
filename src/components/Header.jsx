@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Download, 
-  Upload, 
   HelpCircle, 
   ChevronDown, 
   Sliders, 
@@ -248,16 +247,6 @@ export function Header({
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
-
-        {/* Desktop Import Button */}
-        <button
-          className="btn btn-sm btn-outline desktop-only"
-          onClick={() => fileInputRef.current?.click()}
-          title="Import a custom .kfpack suite from your device"
-        >
-          <Upload size={12} />
-          <span>Import .kfpack</span>
-        </button>
 
         {/* Export Button (Always visible on Desktop and Mobile!) */}
         <button
