@@ -57,11 +57,14 @@ ENGINE SPECIFICATION & CONSTRAINTS:
      Write final color to gl_FragColor = vec4(rgb, alpha);
 
 2. JSON RESPONSE FORMAT:
-You MUST respond with raw JSON only (no conversational text). The JSON must match this exact schema:
+You MUST respond with valid RFC 8259 JSON only (no conversational text).
+CRITICAL: Do NOT include JavaScript comments (// or /* */) inside the JSON.
+CRITICAL: In the shaderCode string, escape newlines as \n.
+The JSON must match this exact schema:
 {
   "id": "snake_case_id",
   "name": "Human Readable Effect Title",
-  "category": "DISTORT" | "COLOR" | "LIGHT" | "BLUR" | "RETRO" | "GLITCH" | "STYLIZED",
+  "category": "DISTORT",
   "description": "Short 1-sentence description of what this effect does.",
   "parameters": [
     {
@@ -71,31 +74,138 @@ You MUST respond with raw JSON only (no conversational text). The JSON must matc
       "max": 2.0,
       "default": 1.0,
       "step": 0.01,
-      "type": "float" // or "boolean"
+      "type": "float"
     }
   ],
-  "shaderCode": "#ifdef GL_FRAGMENT_PRECISION_HIGH\\nprecision highp float;\\n..."
+  "shaderCode": "#ifdef GL_FRAGMENT_PRECISION_HIGH\\nprecision highp float;\\n#else\\nprecision mediump float;\\n#endif\\n\\nuniform sampler2D uTexture;\\nvarying vec2 vTex;\\n\\nvoid main() {\\n  gl_FragColor = texture2D(uTexture, vTex);\\n}"
 }
 
 Ensure the shader code compiles without syntax errors. Avoid non-standard WebGL extensions.`;
 
 /**
- * Strips markdown code blocks and extracts raw JSON from an AI response.
+ * Strips markdown code blocks, cleans comments/newlines, and robustly extracts JSON.
  */
 function extractJson(text) {
   if (!text) throw new Error('Empty response from AI service');
-  let clean = text.trim();
-  // Remove markdown fences: ```json ... ``` or ``` ... ```
-  if (clean.startsWith('```')) {
-    clean = clean.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
+  let s = text.trim();
+
+  // 1. Strip markdown code fences ```json ... ``` or ``` ... ```
+  if (s.startsWith('```')) {
+    s = s.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```$/, '').trim();
   }
-  // If text contains JSON embedded inside other text, find the outermost { }
-  const firstBrace = clean.indexOf('{');
-  const lastBrace = clean.lastIndexOf('}');
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    clean = clean.slice(firstBrace, lastBrace + 1);
+
+  // 2. Find outermost { and }
+  const first = s.indexOf('{');
+  const last = s.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) {
+    s = s.slice(first, last + 1);
   }
-  return JSON.parse(clean);
+
+  // Attempt 1: Direct JSON.parse
+  try {
+    return JSON.parse(s);
+  } catch (_) {}
+
+  // Attempt 2: Sanitize comments and trailing commas
+  let sanitized = s
+    .replace(/(?<!:)\/\/.*$/gm, '')        // Remove JS line comments
+    .replace(/\/\*[\s\S]*?\*\//g, '')     // Remove multi-line comments
+    .replace(/,(\s*[\]}])/g, '$1');       // Remove trailing commas
+
+  try {
+    return JSON.parse(sanitized);
+  } catch (_) {}
+
+  // Attempt 3: Fix unescaped literal newlines/tabs inside string literals
+  let inString = false;
+  let escaped = false;
+  let buffer = '';
+  for (let i = 0; i < sanitized.length; i++) {
+    const char = sanitized[i];
+    if (char === '"' && !escaped) {
+      inString = !inString;
+      buffer += char;
+    } else if (inString && (char === '\n' || char === '\r')) {
+      buffer += '\\n';
+    } else if (inString && char === '\t') {
+      buffer += '\\t';
+    } else {
+      buffer += char;
+    }
+    escaped = (char === '\\' && !escaped);
+  }
+
+  try {
+    return JSON.parse(buffer);
+  } catch (_) {}
+
+  // Attempt 4: Fallback regex extraction if model truncated or output mixed format
+  return fallbackExtractJson(text);
+}
+
+function fallbackExtractJson(raw) {
+  const idMatch = raw.match(/"id"\s*:\s*"([^"]+)"/);
+  const nameMatch = raw.match(/"name"\s*:\s*"([^"]+)"/);
+  const catMatch = raw.match(/"category"\s*:\s*"([^"]+)"/);
+  const descMatch = raw.match(/"description"\s*:\s*"([^"]+)"/);
+
+  // Extract shaderCode: everything after "shaderCode": "
+  let shaderCode = '';
+  const shaderStart = raw.indexOf('"shaderCode"');
+  if (shaderStart !== -1) {
+    const colonIdx = raw.indexOf(':', shaderStart);
+    const quoteOpen = raw.indexOf('"', colonIdx + 1);
+    if (quoteOpen !== -1) {
+      const rest = raw.slice(quoteOpen + 1);
+      const quoteClose = rest.lastIndexOf('"');
+      shaderCode = rest.slice(0, quoteClose !== -1 ? quoteClose : rest.length)
+        .replace(/\\n/g, '\n')
+        .replace(/\\"/g, '"');
+    }
+  }
+
+  // If not found in JSON, look for markdown code block containing gl_FragColor
+  if (!shaderCode && raw.includes('gl_FragColor')) {
+    const glslBlock = raw.match(/```(?:glsl)?\s*([\s\S]*?)```/);
+    if (glslBlock) {
+      shaderCode = glslBlock[1].trim();
+    }
+  }
+
+  // Extract parameters array
+  let parameters = [];
+  const paramsStart = raw.indexOf('"parameters"');
+  if (paramsStart !== -1) {
+    const bracketOpen = raw.indexOf('[', paramsStart);
+    if (bracketOpen !== -1) {
+      let depth = 0;
+      let bracketClose = -1;
+      for (let i = bracketOpen; i < raw.length; i++) {
+        if (raw[i] === '[') depth++;
+        if (raw[i] === ']') {
+          depth--;
+          if (depth === 0) { bracketClose = i; break; }
+        }
+      }
+      if (bracketClose !== -1) {
+        const pStr = raw.slice(bracketOpen, bracketClose + 1)
+          .replace(/(?<!:)\/\/.*$/gm, '')
+          .replace(/,(\s*[\]}])/g, '$1');
+        try {
+          parameters = JSON.parse(pStr);
+        } catch (_) {}
+      }
+    }
+  }
+
+  return {
+    id: idMatch ? idMatch[1] : 'ai_effect_' + Date.now(),
+    name: nameMatch ? nameMatch[1] : 'AI Custom Effect',
+    category: catMatch ? catMatch[1] : 'DISTORT',
+    description: descMatch ? descMatch[1] : 'Custom visual effect.',
+    parameters,
+    shaderCode
+  };
 }
 
 /**
