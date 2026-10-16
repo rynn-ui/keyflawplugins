@@ -67,7 +67,7 @@ export function AiStudioModal({
       const s = getAiSettings();
       setActiveProvider(s.provider || 'gemini');
       let currentMod = s.model || AI_PROVIDERS[s.provider || 'gemini']?.defaultModel || '';
-      if (currentMod === 'gemini-2.0-flash') currentMod = 'gemini-3.8-flash';
+      if (currentMod === 'gemini-2.0-flash' || currentMod === 'gemini-2.5-flash') currentMod = 'gemini-3.8-flash';
       setActiveModel(currentMod);
       setProviderKeys(s.keys || {});
       setErrorMessage(null);

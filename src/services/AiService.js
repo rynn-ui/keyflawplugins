@@ -16,13 +16,11 @@ export const AI_PROVIDERS = {
     keyHelpUrl: 'https://aistudio.google.com/app/apikey',
     keyPlaceholder: 'AIzaSy...',
     models: [
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Recommended • Fast & Stable Free)' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Ultra Reliable • High Capacity)' },
-      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Latest Preview)' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+      { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Recommended • Interactions API)' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
     ],
-    defaultModel: 'gemini-2.5-flash'
+    defaultModel: 'gemini-3.8-flash'
   },
   openrouter: {
     id: 'openrouter',
@@ -99,7 +97,7 @@ export function getAiSettings() {
           mergedKeys[parsed.provider] = parsed.apiKey;
         }
         let model = parsed.model || AI_PROVIDERS[parsed.provider].defaultModel;
-        if (model === 'gemini-2.0-flash') {
+        if (model === 'gemini-2.0-flash' || model === 'gemini-2.5-flash') {
           model = 'gemini-3.8-flash';
         }
         return {
@@ -122,7 +120,7 @@ export function getAiSettings() {
   return {
     provider: 'gemini',
     apiKey: legacyKey,
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.8-flash',
     keys: {
       ...defaultKeys,
       gemini: legacyKey
@@ -517,19 +515,46 @@ function normalizeEffectData(data, userPrompt = '') {
    PROVIDER API CALLERS
    ======================================================== */
 
-// 1. Google Gemini API
-const GEMINI_STABLE_FALLBACKS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-3.8-flash'];
+// 1. Google Gemini API (Interactions API + generateContent Fallback)
+async function callGeminiInteractions(prompt, apiKey, model = 'gemini-3.8-flash') {
+  const cleanModel = (model || 'gemini-3.8-flash').replace(/^models\//, '');
+  const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${encodeURIComponent(apiKey)}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
+    body: JSON.stringify({
+      model: cleanModel,
+      input: `${KEYFLAW_GLSL_SYSTEM_PROMPT}\n\nUSER REQUEST:\n${prompt}`,
+      responseFormat: {
+        mimeType: 'application/json'
+      }
+    })
+  });
 
-async function callGemini(prompt, apiKey, model = 'gemini-2.5-flash', attemptedModels = new Set()) {
-  if (!apiKey) throw new Error('Google Gemini API Key is missing. Please enter your API key in AI Settings.');
-
-  let cleanModel = (model || 'gemini-2.5-flash').replace(/^models\//, '');
-  if (cleanModel === 'gemini-2.0-flash') {
-    cleanModel = 'gemini-2.5-flash';
+  if (!response.ok) {
+    const errBody = await response.text();
+    let msg = `Gemini Interactions API error (HTTP ${response.status})`;
+    try {
+      const p = JSON.parse(errBody);
+      if (p.error?.message) msg = p.error.message;
+    } catch (_) {}
+    throw new Error(msg);
   }
-  attemptedModels.add(cleanModel);
 
+  const data = await response.json();
+  const text = data.interaction?.outputText || data.outputText || data.output?.text || data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('No outputText returned by Gemini Interactions API.');
+  return extractJson(text);
+}
+
+async function callGeminiGenerateContent(prompt, apiKey, model = 'gemini-1.5-flash') {
+  const cleanModel = (model || 'gemini-1.5-flash').replace(/^models\//, '');
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -547,27 +572,6 @@ async function callGemini(prompt, apiKey, model = 'gemini-2.5-flash', attemptedM
       const p = JSON.parse(errBody);
       if (p.error?.message) msg = p.error.message;
     } catch (_) {}
-
-    // Case 1: Model deprecated or not found (e.g. 404 or "is no longer available")
-    if (msg.includes('is no longer available') || msg.includes('not found') || msg.includes('404')) {
-      const match = msg.match(/models\/([a-zA-Z0-9.-]+)/);
-      const suggestedModel = match ? match[1] : 'gemini-2.5-flash';
-      if (suggestedModel && !attemptedModels.has(suggestedModel)) {
-        console.warn(`[Keyflaw AI] Gemini model ${cleanModel} unavailable. Auto-migrating to ${suggestedModel}...`);
-        return await callGemini(prompt, apiKey, suggestedModel, attemptedModels);
-      }
-    }
-
-    // Case 2: High demand / overloaded / rate-limit / 503 / 429
-    const isHighDemand = msg.includes('high demand') || msg.includes('overloaded') || msg.includes('Resource has been exhausted') || response.status === 503 || response.status === 429;
-    if (isHighDemand) {
-      const nextFallback = GEMINI_STABLE_FALLBACKS.find((m) => !attemptedModels.has(m));
-      if (nextFallback) {
-        console.warn(`[Keyflaw AI] ${cleanModel} is experiencing high demand. Auto-falling back to ${nextFallback}...`);
-        return await callGemini(prompt, apiKey, nextFallback, attemptedModels);
-      }
-    }
-
     throw new Error(msg);
   }
 
@@ -575,6 +579,41 @@ async function callGemini(prompt, apiKey, model = 'gemini-2.5-flash', attemptedM
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('No response text returned by Gemini.');
   return extractJson(text);
+}
+
+async function callGemini(prompt, apiKey, model = 'gemini-3.8-flash') {
+  if (!apiKey) throw new Error('Google Gemini API Key is missing. Please enter your API key in AI Settings.');
+
+  let cleanModel = (model || 'gemini-3.8-flash').replace(/^models\//, '');
+  if (cleanModel === 'gemini-2.0-flash' || cleanModel === 'gemini-2.5-flash') {
+    cleanModel = 'gemini-3.8-flash';
+  }
+
+  // 1. If gemini-3.8-flash, call Google's Interactions API
+  if (cleanModel.startsWith('gemini-3')) {
+    try {
+      return await callGeminiInteractions(prompt, apiKey, cleanModel);
+    } catch (err) {
+      console.warn('[Keyflaw AI] Interactions API failed, falling back to generateContent on gemini-1.5-flash:', err.message);
+      try {
+        return await callGeminiGenerateContent(prompt, apiKey, 'gemini-1.5-flash');
+      } catch (_) {
+        throw err;
+      }
+    }
+  }
+
+  // 2. Otherwise try generateContent first
+  try {
+    return await callGeminiGenerateContent(prompt, apiKey, cleanModel);
+  } catch (err) {
+    // If Google says model is deprecated/unavailable to new users, switch to Interactions API
+    if (err.message?.includes('no longer available') || err.message?.includes('Interactions API')) {
+      console.warn('[Keyflaw AI] Legacy model unavailable. Migrating to Interactions API (gemini-3.8-flash)...');
+      return await callGeminiInteractions(prompt, apiKey, 'gemini-3.8-flash');
+    }
+    throw err;
+  }
 }
 
 // 2. OpenRouter API (Claude, Grok, DeepSeek, GPT-4o, Free Tier)
