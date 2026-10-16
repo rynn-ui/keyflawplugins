@@ -3,7 +3,6 @@ import {
   Sliders, 
   Code2, 
   FolderTree, 
-  Package, 
   Info
 } from 'lucide-react';
 
@@ -153,6 +152,26 @@ export default function App() {
       applySuiteData(found);
       showToast(`Switched to ${found.suite?.name || suiteId}`);
     }
+  };
+
+  const handleRemoveSuite = (suiteId) => {
+    setImportedSuites((prev) => {
+      const nextList = prev.filter((s) => s.suite?.id !== suiteId);
+      if (suite?.id === suiteId) {
+        if (nextList.length > 0) {
+          applySuiteData(nextList[0]);
+        } else {
+          setSuite(null);
+          setEffects([]);
+          setFiles({});
+          setActiveEffectId('');
+          setActiveFilePath('');
+          setOpenFiles([]);
+        }
+      }
+      return nextList;
+    });
+    showToast('Suite removed from session', 'info');
   };
 
   const applySuiteData = (data) => {
@@ -479,6 +498,7 @@ export default function App() {
         suite={suite}
         importedSuites={importedSuites}
         onSelectSuite={handleSelectImportedSuite}
+        onRemoveSuite={handleRemoveSuite}
         onImportSuiteFile={handleImportKfpackFile}
         onExportSuite={handleExportSuite}
         onOpenGuide={() => setIsGuideOpen(true)}
