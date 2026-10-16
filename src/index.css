@@ -1,0 +1,1174 @@
+/* Keyflaw Studio — Solid Simplistic Black & White Design System */
+:root {
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'Geist Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+
+  /* Solid Monochrome Palette */
+  --bg-black: #000000;
+  --bg-surface: #0a0a0a;
+  --bg-card: #121212;
+  --bg-card-hover: #181818;
+  --bg-elevated: #1f1f1f;
+
+  /* High-Contrast Borders */
+  --border-subtle: #1c1c1c;
+  --border-default: #2a2a2a;
+  --border-hover: #444444;
+  --border-active: #ffffff;
+
+  /* Monochrome Typography */
+  --fg-primary: #ffffff;
+  --fg-secondary: #a6a6a6;
+  --fg-muted: #666666;
+  --fg-faint: #3a3a3a;
+
+  /* Pure B&W Controls */
+  --ctrl-bg: #0d0d0d;
+  --ctrl-border: #2e2e2e;
+  --ctrl-active-bg: #ffffff;
+  --ctrl-active-fg: #000000;
+
+  /* Radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 9999px;
+
+  /* Dimensions */
+  --header-height: 48px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-black);
+  color: var(--fg-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-black);
+  overflow: hidden;
+}
+
+/* Custom Minimalist Monochrome Scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-black);
+}
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #666666;
+}
+
+/* Typography Utilities */
+.font-mono {
+  font-family: var(--font-mono);
+}
+.text-muted {
+  color: var(--fg-muted);
+}
+.text-secondary {
+  color: var(--fg-secondary);
+}
+
+/* Button System (Keyflaw Inbuilt App Style) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: var(--bg-card);
+  color: var(--fg-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  color: #ffffff;
+}
+.btn:active {
+  background: var(--bg-elevated);
+}
+
+/* Primary Action Button — Solid High-Contrast White */
+.btn-primary {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: #e2e2e2;
+  border-color: #e2e2e2;
+  color: #000000;
+}
+
+/* Ghost / Subtle Button */
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-secondary);
+}
+.btn-ghost:hover {
+  background: #181818;
+  color: #ffffff;
+  border-color: #2a2a2a;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--fg-primary);
+}
+.btn-outline:hover {
+  background: #181818;
+  border-color: var(--border-hover);
+}
+
+.btn-sm {
+  height: 24px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+.btn-icon-only {
+  width: 30px;
+  padding: 0;
+}
+.btn-icon-sm {
+  width: 24px;
+  padding: 0;
+}
+
+/* Monochrome Badges / Chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: #141414;
+  border: 1px solid var(--border-default);
+  color: var(--fg-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge-active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+}
+
+/* Numeric & Text Inputs */
+.input-text {
+  height: 28px;
+  padding: 0 8px;
+  background: #080808;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.12s ease;
+}
+.input-text:focus {
+  border-color: #ffffff;
+}
+
+/* ========================================================
+   KEYFLAW APP INBUILT SLIDER SPECIFICATION
+   High contrast, 6px capsule track, solid 16px circular thumb
+   ======================================================== */
+.kf-slider-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #202020;
+  border-radius: var(--radius-pill);
+  outline: none;
+  cursor: pointer;
+  margin: 4px 0;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  background: #222222;
+  border-radius: var(--radius-pill);
+  border: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  cursor: pointer;
+  margin-top: -5px; /* Centers thumb on 6px track */
+  transition: transform 0.08s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+  background: #ffffff;
+}
+
+input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background: #222222;
+  border-radius: var(--radius-pill);
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  cursor: pointer;
+}
+
+/* ========================================================
+   SINGLE-SCREEN STUDIO ARCHITECTURE (NO INDENTATION BUG)
+   ======================================================== */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  height: 100vh;
+  background: var(--bg-black);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Minimalist Monochrome Header */
+.app-header {
+  height: var(--header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: #000000;
+  border-bottom: 1px solid var(--border-default);
+  z-index: 50;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: #000000;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: -0.5px;
+}
+.brand-logo-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+.brand-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+/* Layout Switcher Buttons */
+.layout-switcher {
+  display: inline-flex;
+  background: #111111;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+  gap: 2px;
+}
+.layout-btn {
+  height: 24px;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  color: var(--fg-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.layout-btn.active {
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+}
+
+/* Master Studio Workspace (Full Height, One Screen) */
+.studio-main-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Unified Persistent Grid Workspace (Canvas never unmounts across layout switches) */
+.studio-grid-container {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 1. App View: Left Viewport (Flex 1fr) + Right Sliders (440px) */
+.studio-grid-container.layout-app {
+  grid-template-columns: 1fr 440px;
+  grid-template-rows: 100%;
+  grid-template-areas: "viewport sliders";
+}
+
+/* 2. Split View: Viewport (1.2fr) + Sliders (380px) + Code Editor (1fr) */
+.studio-grid-container.layout-split {
+  grid-template-columns: minmax(320px, 1.2fr) minmax(320px, 380px) minmax(360px, 1fr);
+  grid-template-rows: 100%;
+  grid-template-areas: "viewport sliders editor";
+}
+
+/* 3. Code View: Files (220px) + Code Editor (1fr) + Right Column (Viewport top, Sliders bottom) */
+.studio-grid-container.layout-code {
+  grid-template-columns: 220px 1fr 380px;
+  grid-template-rows: 1fr 340px;
+  grid-template-areas:
+    "files editor viewport"
+    "files editor sliders";
+}
+
+.panel-viewport {
+  grid-area: viewport;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-sliders {
+  grid-area: sliders;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-default);
+}
+
+.layout-code .panel-viewport {
+  border-bottom: 1px solid var(--border-default);
+}
+
+.panel-editor {
+  grid-area: editor;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-files {
+  grid-area: files;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========================================================
+   VIEWPORT PREVIEW & EMPTY MEDIA STATE
+   ======================================================== */
+.viewport-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #000000;
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-container {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #000000;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.webgl-canvas {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: auto;
+  background: #000000;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 32px rgba(0, 0, 0, 0.85);
+  border-radius: 2px;
+}
+
+/* Solid Minimalist Dropzone / Empty State */
+.empty-media-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  max-width: 440px;
+  padding: 36px 24px;
+  border: 1px dashed #333333;
+  border-radius: var(--radius-md);
+  background: #080808;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.empty-media-dropzone:hover {
+  border-color: #666666;
+  background: #0e0e0e;
+}
+.empty-media-dropzone.drag-active {
+  border-color: #ffffff;
+  background: #141414;
+}
+
+/* Viewport Transport Controls Overlay */
+.viewport-transport {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  z-index: 20;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+}
+
+/* ========================================================
+   KEYFLAW INBUILT EFFECT CONTROLLER & SLIDERS UI
+   ======================================================== */
+.parameters-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.parameters-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: #000000;
+}
+
+/* Horizontal Category Filter Pills (Inbuilt Keyflaw App Style) */
+.category-filter-bar {
+  display: flex;
+  gap: 5px;
+  padding: 8px 12px;
+  background: #000000;
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.category-pill {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: #0a0a0a;
+  color: var(--fg-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+.category-pill:hover {
+  background: #181818;
+  color: #ffffff;
+  border-color: #444444;
+}
+.category-pill.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+}
+
+/* Horizontal Effect Picker (Inbuilt App Shelf) */
+.effect-shelf-bar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #070707;
+  border-bottom: 1px solid var(--border-default);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.effect-chip {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: #111111;
+  color: var(--fg-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.12s ease;
+}
+.effect-chip:hover {
+  background: #1c1c1c;
+  color: #ffffff;
+  border-color: #444444;
+}
+.effect-chip.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+}
+
+/* Sliders List Scrollable Container */
+.parameters-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ========================================================
+   KEYFLAW ANDROID EFFECT CARD & RULER CONTROLS
+   Exact replication of the Keyflaw / Keyflow Android UI
+   ======================================================== */
+.kf-effect-card {
+  background: #19191b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  transition: opacity 0.15s ease;
+}
+
+.kf-effect-card.is-bypassed {
+  opacity: 0.6;
+}
+
+.kf-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #19191b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.kf-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.kf-drag-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: #71717a;
+  user-select: none;
+}
+
+.kf-effect-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.2px;
+}
+
+.kf-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.kf-icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #71717a;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.kf-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.kf-icon-btn.text-blue {
+  color: #3d6ae1;
+}
+
+.kf-icon-btn.text-red {
+  color: #e5484d;
+}
+.kf-icon-btn.text-red:hover {
+  background: rgba(229, 72, 77, 0.15);
+  color: #ff6b6b;
+}
+
+.kf-card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #19191b;
+}
+
+/* --------------------------------------------------------
+   KEYFLAW RULER SLIDER (Exact Match to Screenshot)
+   -------------------------------------------------------- */
+.kf-slider-row {
+  display: flex;
+  height: 68px;
+  background: #121214;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.12s ease;
+}
+
+.kf-slider-row.is-active,
+.kf-slider-row:hover {
+  border-color: rgba(61, 106, 225, 0.4);
+}
+
+.kf-param-left {
+  width: 135px;
+  flex-shrink: 0;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #27272a;
+  background: #121214;
+}
+
+.kf-param-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  transition: color 0.12s ease;
+}
+
+.kf-param-name.text-blue {
+  color: #3d6ae1;
+}
+
+/* Ruler Scrub Track */
+.kf-ruler-track {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  cursor: ew-resize;
+  user-select: none;
+  touch-action: none;
+  background: #121214;
+}
+
+/* Vertical Center Needle */
+.kf-ruler-needle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 26px;
+  bottom: 0;
+  width: 2px;
+  background: #3d6ae1;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* Blue Rounded Badge */
+.kf-ruler-badge {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 6px;
+  height: 24px;
+  min-width: 46px;
+  padding: 0 12px;
+  background: #3d6ae1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: filter 0.12s ease;
+}
+
+.kf-ruler-badge:hover {
+  filter: brightness(1.1);
+}
+
+.kf-ruler-badge-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+  font-family: var(--font-sans);
+  line-height: 1;
+  letter-spacing: -0.2px;
+}
+
+.kf-ruler-input {
+  width: 50px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #000000;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0;
+}
+
+/* Ruler Tape & Ticks */
+.kf-ruler-tape {
+  position: absolute;
+  top: 32px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.kf-tick-number {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 500;
+  color: #8e8e93;
+  line-height: 1;
+}
+
+.kf-tick-line {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+}
+
+.kf-tick-line.kf-major {
+  width: 1.5px;
+  height: 11px;
+  background: #8e8e93;
+}
+
+.kf-tick-line.kf-minor {
+  width: 1px;
+  height: 6px;
+  background: #48484a;
+}
+
+/* --------------------------------------------------------
+   KEYFLAW TOGGLE SWITCH BUTTON (Exact Match to Screenshot)
+   -------------------------------------------------------- */
+.kf-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 58px;
+  padding: 0 20px;
+  background: #121214;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.12s ease;
+}
+
+.kf-toggle-row:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.kf-toggle-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f0f0f2;
+}
+
+.kf-switch-track {
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: #1c1c1f;
+  border: 1px solid #333336;
+  position: relative;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.kf-switch-track.checked {
+  background: #3d6ae1;
+  border-color: #3d6ae1;
+}
+
+.kf-switch-knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #a1a1aa;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.22s cubic-bezier(0.2, 0.85, 0.32, 1.2), background-color 0.2s ease;
+}
+
+.kf-switch-knob.checked {
+  background: #ffffff;
+  transform: translateX(20px);
+}
+
+/* --------------------------------------------------------
+   EMPTY SUITE STATE (Dropzone when no suite is loaded)
+   -------------------------------------------------------- */
+.empty-suite-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  padding: 48px 24px;
+  background: #080808;
+}
+
+.empty-suite-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #141416;
+  border: 1px solid #27272a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.empty-suite-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.empty-suite-desc {
+  font-size: 12px;
+  color: var(--fg-secondary);
+  max-width: 280px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.empty-suite-desc code {
+  color: #3d6ae1;
+  background: #161619;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.kf-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: #1a1a1d;
+  border: 1px solid #2e2e32;
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.kf-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: #d1d1d6;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.kf-menu-item:hover {
+  background: #2a2a2f;
+  color: #ffffff;
+}
+
+.kf-empty-params {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 12px;
+  color: #71717a;
+  font-size: 12px;
+}
+
+/* ========================================================
+   FILE TREE & CODE EDITOR (MONOCHROME B&W)
+   ======================================================== */
+.file-tree-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #070707;
+  border-right: 1px solid var(--border-default);
+  overflow-y: auto;
+}
+.file-tree-header {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  user-select: none;
+  border-left: 2px solid transparent;
+}
+.tree-node:hover {
+  background: #141414;
+  color: #ffffff;
+}
+.tree-node.active {
+  background: #181818;
+  color: #ffffff;
+  border-left-color: #ffffff;
+  font-weight: 500;
+}
+
+.editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #080808;
+  border-right: 1px solid var(--border-default);
+  overflow: hidden;
+}
+.editor-tabs-bar {
+  display: flex;
+  align-items: center;
+  background: #000000;
+  border-bottom: 1px solid var(--border-default);
+  height: 34px;
+  padding: 0 8px;
+  gap: 4px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.editor-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+  background: transparent;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.editor-tab.active {
+  background: #141414;
+  color: #ffffff;
+  border-color: var(--border-default);
+}
+
+/* Modal Overlay (Clean Minimalist B&W) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 100;
+}
+.modal-content {
+  width: 100%;
+  max-width: 500px;
+  background: #0d0d0d;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Diagnostic Error Bar */
+.error-diagnostic-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #141414;
+  border-top: 1px solid #333333;
+  color: #ffffff;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
