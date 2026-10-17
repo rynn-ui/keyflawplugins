@@ -735,6 +735,15 @@ input[type="range"]::-moz-range-thumb {
   .header-export-text {
     display: inline;
   }
+
+  .kf-param-left {
+    width: 110px;
+    padding: 0 10px;
+  }
+
+  .kf-param-name {
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -1013,7 +1022,11 @@ input[type="range"]::-moz-range-thumb {
   flex: 1;
   min-height: 0;
   padding: 14px;
+  padding-bottom: 84px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1032,6 +1045,7 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   flex-direction: column;
   transition: opacity 0.15s ease;
+  touch-action: pan-y;
 }
 
 .kf-effect-card.is-bypassed {
@@ -1045,6 +1059,7 @@ input[type="range"]::-moz-range-thumb {
   padding: 12px 14px;
   background: #19191b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  touch-action: pan-y;
 }
 
 .kf-card-title-group {
@@ -1115,6 +1130,7 @@ input[type="range"]::-moz-range-thumb {
   flex-direction: column;
   gap: 8px;
   background: #19191b;
+  touch-action: pan-y;
 }
 
 /* --------------------------------------------------------
@@ -1128,6 +1144,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.12s ease;
+  touch-action: pan-y;
 }
 
 .kf-slider-row.is-active,
@@ -1143,6 +1160,7 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   border-right: 1px solid #27272a;
   background: #121214;
+  touch-action: pan-y;
 }
 
 .kf-param-name {
@@ -1168,7 +1186,7 @@ input[type="range"]::-moz-range-thumb {
   overflow: hidden;
   cursor: ew-resize;
   user-select: none;
-  touch-action: none;
+  touch-action: pan-y;
   background: #121214;
 }
 

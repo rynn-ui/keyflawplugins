@@ -90,8 +90,12 @@ export function KeyflawRulerSlider({
 
   const trackRef = useRef(null);
   const startXRef = useRef(0);
+  const startYRef = useRef(0);
   const startValRef = useRef(0);
   const isPointerDownRef = useRef(false);
+  const isScrubbingRef = useRef(false);
+  const isIntentLockedRef = useRef(false);
+  const activePointerIdRef = useRef(null);
 
   // Measure ruler width dynamically
   useEffect(() => {
@@ -172,25 +176,74 @@ export function KeyflawRulerSlider({
     return list;
   }, [min, max, currentVal, majorStep, minorStep, pxPerUnit, trackWidth, centerX]);
 
-  // Pointer Scrub Handlers
+  // Pointer Scrub Handlers (Touch-friendly with scroll/scrub directional disambiguation)
   const handlePointerDown = (e) => {
     if (isEditing) return;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (_) {}
+    if (e.button !== undefined && e.button !== 0) return;
 
     isPointerDownRef.current = true;
     startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
     startValRef.current = currentVal;
-    setIsDragging(true);
+    activePointerIdRef.current = e.pointerId;
+
+    if (e.pointerType === 'mouse') {
+      // Desktop mouse users: immediate scrubbing response
+      isIntentLockedRef.current = true;
+      isScrubbingRef.current = true;
+      setIsDragging(true);
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    } else {
+      // Mobile touch users: wait to disambiguate scroll vs scrub
+      isIntentLockedRef.current = false;
+      isScrubbingRef.current = false;
+    }
   };
 
   const handlePointerMove = (e) => {
     if (!isPointerDownRef.current) return;
+    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) return;
+
     const dx = e.clientX - startXRef.current;
+    const dy = e.clientY - startYRef.current;
+
+    // Disambiguate scroll vs scrub on touch devices
+    if (!isIntentLockedRef.current) {
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      const totalDist = Math.hypot(dx, dy);
+
+      // Require a small slop before locking intent
+      if (totalDist < 7) {
+        return;
+      }
+
+      // If user is swiping more vertically than horizontally:
+      // This is a SCROLL gesture! Yield completely to browser vertical scrolling.
+      if (absY > absX) {
+        isIntentLockedRef.current = true;
+        isScrubbingRef.current = false;
+        isPointerDownRef.current = false;
+        return;
+      }
+
+      // Otherwise, the user is intentionally swiping horizontally: SCRUB
+      isIntentLockedRef.current = true;
+      isScrubbingRef.current = true;
+      setIsDragging(true);
+      startXRef.current = e.clientX;
+      startValRef.current = currentVal;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    }
+
+    if (!isScrubbingRef.current) return;
 
     // Dragging left moves higher numbers to center needle
-    const deltaVal = -dx / pxPerUnit;
+    const deltaVal = -(e.clientX - startXRef.current) / pxPerUnit;
     let nextVal = startValRef.current + deltaVal;
     nextVal = Math.max(min, Math.min(max, nextVal));
 
@@ -203,17 +256,28 @@ export function KeyflawRulerSlider({
   };
 
   const handlePointerUp = (e) => {
-    if (!isPointerDownRef.current) return;
+    if (!isPointerDownRef.current && !isScrubbingRef.current) return;
+
+    const wasScrubbing = isScrubbingRef.current;
+    const wasPointerDown = isPointerDownRef.current;
+
     isPointerDownRef.current = false;
+    isScrubbingRef.current = false;
+    isIntentLockedRef.current = false;
+    activePointerIdRef.current = null;
     setIsDragging(false);
 
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch (_) {}
 
-    // Check if it was a quick click without scrub
-    const totalDist = Math.abs(e.clientX - startXRef.current);
-    if (totalDist < 3 && trackRef.current) {
+    // Check if it was a quick click/tap without scrub or scroll intent
+    const dist = Math.hypot(
+      e.clientX - startXRef.current,
+      e.clientY - startYRef.current
+    );
+
+    if (wasPointerDown && !wasScrubbing && dist < 5 && trackRef.current) {
       const rect = trackRef.current.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       const distFromCenter = clickX - centerX;
@@ -225,6 +289,17 @@ export function KeyflawRulerSlider({
       }
       onChange(targetVal);
     }
+  };
+
+  const handlePointerCancel = (e) => {
+    isPointerDownRef.current = false;
+    isScrubbingRef.current = false;
+    isIntentLockedRef.current = false;
+    activePointerIdRef.current = null;
+    setIsDragging(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
   };
 
   // Direct numeric input in badge
@@ -269,7 +344,7 @@ export function KeyflawRulerSlider({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {/* Center Blue Needle Line */}
         <div className="kf-ruler-needle" />
@@ -277,6 +352,7 @@ export function KeyflawRulerSlider({
         {/* Center Blue Pill Badge */}
         <div 
           className="kf-ruler-badge"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={handleBadgeClick}
           title="Click to type exact numeric value"
         >
@@ -289,6 +365,7 @@ export function KeyflawRulerSlider({
               step={step}
               min={min}
               max={max}
+              onPointerDown={(e) => e.stopPropagation()}
               onChange={(e) => setEditVal(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') commitEdit();

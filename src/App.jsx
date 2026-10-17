@@ -658,7 +658,7 @@ export default function App() {
             </div>
 
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {mobileTab === 'sliders' && <ParameterSliders {...slidersProps} />}
 
                 {mobileTab === 'code' && (
@@ -684,7 +684,7 @@ export default function App() {
                 )}
 
                 {mobileTab === 'pack' && (
-                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div className="param-card">
                       <h3 style={{ color: '#ffffff', fontSize: '14px', fontWeight: 600 }}>{suite?.name}</h3>
                       <p className="font-mono text-muted" style={{ fontSize: '11px' }}>ID: {suite?.id}</p>
