@@ -290,6 +290,7 @@ input[type="range"]::-moz-range-thumb {
   width: 100%;
   max-width: 100%;
   height: 100vh;
+  height: 100dvh;
   background: var(--bg-black);
   position: relative;
   overflow: hidden;
@@ -928,6 +929,9 @@ input[type="range"]::-moz-range-thumb {
 .parameters-panel {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
   height: 100%;
   background: var(--bg-surface);
   overflow: hidden;
@@ -988,6 +992,11 @@ input[type="range"]::-moz-range-thumb {
   border-bottom: 1px solid var(--border-default);
   overflow-x: auto;
   flex-shrink: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.effect-shelf-bar::-webkit-scrollbar {
+  display: none;
 }
 .effect-chip {
   height: 28px;
@@ -1022,8 +1031,9 @@ input[type="range"]::-moz-range-thumb {
   flex: 1;
   min-height: 0;
   padding: 14px;
-  padding-bottom: 84px;
+  padding-bottom: 96px;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   touch-action: pan-y;
@@ -1045,7 +1055,6 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   flex-direction: column;
   transition: opacity 0.15s ease;
-  touch-action: pan-y;
 }
 
 .kf-effect-card.is-bypassed {
@@ -1130,7 +1139,6 @@ input[type="range"]::-moz-range-thumb {
   flex-direction: column;
   gap: 8px;
   background: #19191b;
-  touch-action: pan-y;
 }
 
 /* --------------------------------------------------------
@@ -1144,7 +1152,6 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 12px;
   overflow: hidden;
   transition: border-color 0.12s ease;
-  touch-action: pan-y;
 }
 
 .kf-slider-row.is-active,
@@ -1160,7 +1167,6 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   border-right: 1px solid #27272a;
   background: #121214;
-  touch-action: pan-y;
 }
 
 .kf-param-name {
@@ -1186,7 +1192,7 @@ input[type="range"]::-moz-range-thumb {
   overflow: hidden;
   cursor: ew-resize;
   user-select: none;
-  touch-action: pan-y;
+  touch-action: none;
   background: #121214;
 }
 

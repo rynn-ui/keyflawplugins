@@ -91,10 +91,13 @@ export function KeyflawRulerSlider({
   const trackRef = useRef(null);
   const startXRef = useRef(0);
   const startYRef = useRef(0);
+  const lastYRef = useRef(0);
   const startValRef = useRef(0);
   const isPointerDownRef = useRef(false);
   const isScrubbingRef = useRef(false);
+  const isScrollingRef = useRef(false);
   const isIntentLockedRef = useRef(false);
+  const isBadgeClickRef = useRef(false);
   const activePointerIdRef = useRef(null);
 
   // Measure ruler width dynamically
@@ -176,7 +179,7 @@ export function KeyflawRulerSlider({
     return list;
   }, [min, max, currentVal, majorStep, minorStep, pxPerUnit, trackWidth, centerX]);
 
-  // Pointer Scrub Handlers (Touch-friendly with scroll/scrub directional disambiguation)
+  // Pointer Scrub Handlers (Ultra-responsive for touch & desktop)
   const handlePointerDown = (e) => {
     if (isEditing) return;
     if (e.button !== undefined && e.button !== 0) return;
@@ -184,22 +187,23 @@ export function KeyflawRulerSlider({
     isPointerDownRef.current = true;
     startXRef.current = e.clientX;
     startYRef.current = e.clientY;
+    lastYRef.current = e.clientY;
     startValRef.current = currentVal;
     activePointerIdRef.current = e.pointerId;
+    isIntentLockedRef.current = false;
+    isScrubbingRef.current = false;
+    isScrollingRef.current = false;
+    isBadgeClickRef.current = Boolean(e.target.closest('.kf-ruler-badge'));
 
     if (e.pointerType === 'mouse') {
-      // Desktop mouse users: immediate scrubbing response
       isIntentLockedRef.current = true;
       isScrubbingRef.current = true;
       setIsDragging(true);
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch (_) {}
-    } else {
-      // Mobile touch users: wait to disambiguate scroll vs scrub
-      isIntentLockedRef.current = false;
-      isScrubbingRef.current = false;
     }
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
   };
 
   const handlePointerMove = (e) => {
@@ -208,61 +212,67 @@ export function KeyflawRulerSlider({
 
     const dx = e.clientX - startXRef.current;
     const dy = e.clientY - startYRef.current;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
 
     // Disambiguate scroll vs scrub on touch devices
     if (!isIntentLockedRef.current) {
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
-      const totalDist = Math.hypot(dx, dy);
+      const dist = Math.hypot(dx, dy);
+      if (dist < 6) return;
 
-      // Require a small slop before locking intent
-      if (totalDist < 7) {
-        return;
-      }
-
-      // If user is swiping more vertically than horizontally:
-      // This is a SCROLL gesture! Yield completely to browser vertical scrolling.
-      if (absY > absX) {
+      if (e.pointerType === 'touch' && absY > absX * 1.1) {
+        // Vertical swipe intent: scroll the parent parameter container
         isIntentLockedRef.current = true;
+        isScrollingRef.current = true;
         isScrubbingRef.current = false;
-        isPointerDownRef.current = false;
-        return;
+      } else {
+        // Horizontal scrub intent: slide the ruler dial
+        isIntentLockedRef.current = true;
+        isScrubbingRef.current = true;
+        isScrollingRef.current = false;
+        setIsDragging(true);
+      }
+    }
+
+    if (isScrollingRef.current) {
+      const scrollEl = trackRef.current?.closest('.parameters-scroll') || document.querySelector('.parameters-scroll');
+      if (scrollEl) {
+        const stepY = e.clientY - lastYRef.current;
+        scrollEl.scrollTop -= stepY;
+      }
+      lastYRef.current = e.clientY;
+      return;
+    }
+
+    if (isScrubbingRef.current) {
+      // Dragging left moves higher numbers to center needle
+      const deltaVal = -dx / pxPerUnit;
+      let nextVal = startValRef.current + deltaVal;
+      nextVal = Math.max(min, Math.min(max, nextVal));
+
+      if (step > 0) {
+        const inv = 1 / step;
+        nextVal = Math.round(nextVal * inv) / inv;
       }
 
-      // Otherwise, the user is intentionally swiping horizontally: SCRUB
-      isIntentLockedRef.current = true;
-      isScrubbingRef.current = true;
-      setIsDragging(true);
-      startXRef.current = e.clientX;
-      startValRef.current = currentVal;
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch (_) {}
+      onChange(nextVal);
     }
-
-    if (!isScrubbingRef.current) return;
-
-    // Dragging left moves higher numbers to center needle
-    const deltaVal = -(e.clientX - startXRef.current) / pxPerUnit;
-    let nextVal = startValRef.current + deltaVal;
-    nextVal = Math.max(min, Math.min(max, nextVal));
-
-    if (step > 0) {
-      const inv = 1 / step;
-      nextVal = Math.round(nextVal * inv) / inv;
-    }
-
-    onChange(nextVal);
   };
 
   const handlePointerUp = (e) => {
-    if (!isPointerDownRef.current && !isScrubbingRef.current) return;
+    if (!isPointerDownRef.current) return;
 
     const wasScrubbing = isScrubbingRef.current;
-    const wasPointerDown = isPointerDownRef.current;
+    const wasScrolling = isScrollingRef.current;
+    const wasBadge = isBadgeClickRef.current;
+    const dist = Math.hypot(
+      e.clientX - startXRef.current,
+      e.clientY - startYRef.current
+    );
 
     isPointerDownRef.current = false;
     isScrubbingRef.current = false;
+    isScrollingRef.current = false;
     isIntentLockedRef.current = false;
     activePointerIdRef.current = null;
     setIsDragging(false);
@@ -271,42 +281,38 @@ export function KeyflawRulerSlider({
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch (_) {}
 
-    // Check if it was a quick click/tap without scrub or scroll intent
-    const dist = Math.hypot(
-      e.clientX - startXRef.current,
-      e.clientY - startYRef.current
-    );
-
-    if (wasPointerDown && !wasScrubbing && dist < 5 && trackRef.current) {
-      const rect = trackRef.current.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const distFromCenter = clickX - centerX;
-      let targetVal = currentVal + distFromCenter / pxPerUnit;
-      targetVal = Math.max(min, Math.min(max, targetVal));
-      if (step > 0) {
-        const inv = 1 / step;
-        targetVal = Math.round(targetVal * inv) / inv;
+    // Tap handling (small movement < 6px)
+    if (!wasScrubbing && !wasScrolling && dist < 6) {
+      if (wasBadge) {
+        // Tap on badge opens direct numeric edit
+        setEditVal(String(currentVal));
+        setIsEditing(true);
+      } else if (trackRef.current) {
+        // Tap on ruler steps directly to clicked coordinate
+        const rect = trackRef.current.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const distFromCenter = clickX - centerX;
+        let targetVal = currentVal + distFromCenter / pxPerUnit;
+        targetVal = Math.max(min, Math.min(max, targetVal));
+        if (step > 0) {
+          const inv = 1 / step;
+          targetVal = Math.round(targetVal * inv) / inv;
+        }
+        onChange(targetVal);
       }
-      onChange(targetVal);
     }
   };
 
   const handlePointerCancel = (e) => {
     isPointerDownRef.current = false;
     isScrubbingRef.current = false;
+    isScrollingRef.current = false;
     isIntentLockedRef.current = false;
     activePointerIdRef.current = null;
     setIsDragging(false);
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch (_) {}
-  };
-
-  // Direct numeric input in badge
-  const handleBadgeClick = (e) => {
-    e.stopPropagation();
-    setEditVal(String(currentVal));
-    setIsEditing(true);
   };
 
   const commitEdit = () => {
@@ -349,12 +355,10 @@ export function KeyflawRulerSlider({
         {/* Center Blue Needle Line */}
         <div className="kf-ruler-needle" />
 
-        {/* Center Blue Pill Badge */}
+        {/* Center Blue Pill Badge (Supports both sliding by dragging and editing on tap) */}
         <div 
           className="kf-ruler-badge"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={handleBadgeClick}
-          title="Click to type exact numeric value"
+          title="Drag to slide • Tap to enter exact numeric value"
         >
           {isEditing ? (
             <input

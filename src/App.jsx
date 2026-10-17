@@ -3,7 +3,9 @@ import {
   Sliders, 
   Code2, 
   FolderTree, 
-  Info
+  Info,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 import { Header } from './components/Header';
@@ -48,6 +50,7 @@ export default function App() {
   const [activeLayout, setActiveLayout] = useState('app');
   const [mobileTab, setMobileTab] = useState('sliders');
   const [isMobile, setIsMobile] = useState(false);
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -651,13 +654,57 @@ export default function App() {
       {/* Main Studio Viewport & Layout */}
       <div className="studio-main-workspace">
         {isMobile ? (
-          /* Mobile View: Vertical Split */
-          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
-            <div style={{ height: '42%', flexShrink: 0, borderBottom: '1px solid var(--border-default)' }}>
+          /* Mobile View: Vertical Split with Expandable Sliders Area */
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', overflow: 'hidden' }}>
+            <div style={{ 
+              height: isMobileExpanded ? '20%' : '38%', 
+              minHeight: isMobileExpanded ? '110px' : '170px',
+              maxHeight: isMobileExpanded ? '140px' : '40%',
+              flexShrink: 0, 
+              borderBottom: '1px solid var(--border-default)',
+              position: 'relative',
+              transition: 'height 0.2s cubic-bezier(0.16, 1, 0.3, 1), min-height 0.2s ease'
+            }}>
               <Viewport {...viewportProps} />
+
+              {/* Quick Mobile Expand/Collapse Viewport Button */}
+              <button
+                className="btn btn-ghost"
+                onClick={() => setIsMobileExpanded(!isMobileExpanded)}
+                title={isMobileExpanded ? "Restore preview height" : "Expand sliders area"}
+                style={{
+                  position: 'absolute',
+                  bottom: '6px',
+                  right: '6px',
+                  zIndex: 20,
+                  height: '24px',
+                  padding: '0 8px',
+                  fontSize: '11px',
+                  background: 'rgba(0, 0, 0, 0.75)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '9999px',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                {isMobileExpanded ? (
+                  <>
+                    <ChevronDown size={12} />
+                    <span>Split View</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp size={12} />
+                    <span>Expand Sliders</span>
+                  </>
+                )}
+              </button>
             </div>
 
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {mobileTab === 'sliders' && <ParameterSliders {...slidersProps} />}
 
