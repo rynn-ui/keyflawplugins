@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Sliders, 
   RotateCcw, 
@@ -6,7 +6,9 @@ import {
   Eye, 
   EyeOff, 
   ChevronUp, 
-  ChevronDown, 
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Trash2, 
   MoreVertical,
   Equal,
@@ -57,6 +59,51 @@ export function ParameterSliders({
   const [isDragOver, setIsDragOver] = useState(false);
 
   const emptyFileInputRef = useRef(null);
+  const shelfRef = useRef(null);
+  const activeChipRef = useRef(null);
+  const [isDraggingShelf, setIsDraggingShelf] = useState(false);
+  const shelfDragStartX = useRef(0);
+  const shelfScrollStartX = useRef(0);
+
+  // Auto-scroll active effect chip into center of view
+  useEffect(() => {
+    if (activeChipRef.current) {
+      activeChipRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [activeEffect?.id]);
+
+  const handleShelfWheel = (e) => {
+    if (shelfRef.current && e.deltaY !== 0) {
+      shelfRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
+  const handleScrollShelf = (offset) => {
+    if (shelfRef.current) {
+      shelfRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
+  const handleShelfMouseDown = (e) => {
+    if (e.button !== 0) return;
+    setIsDraggingShelf(true);
+    shelfDragStartX.current = e.clientX;
+    shelfScrollStartX.current = shelfRef.current?.scrollLeft || 0;
+  };
+
+  const handleShelfMouseMove = (e) => {
+    if (!isDraggingShelf || !shelfRef.current) return;
+    const dx = e.clientX - shelfDragStartX.current;
+    shelfRef.current.scrollLeft = shelfScrollStartX.current - dx;
+  };
+
+  const handleShelfMouseUp = () => {
+    setIsDraggingShelf(false);
+  };
 
   // Compute unique categories
   const categories = useMemo(() => {
@@ -168,20 +215,51 @@ export function ParameterSliders({
 
       {/* 2. Effect Shelf Chips (If suite contains multiple effects) */}
       {effects.length > 1 && (
-        <div className="effect-shelf-bar">
-          {filteredEffects.map((eff) => {
-            const isActive = eff.id === activeEffect.id;
-            return (
-              <button
-                key={eff.id}
-                className={`effect-chip ${isActive ? 'active' : ''}`}
-                onClick={() => onSelectEffect(eff.id)}
-              >
-                <Layers size={11} />
-                <span>{eff.name || eff.id}</span>
-              </button>
-            );
-          })}
+        <div className="effect-shelf-container">
+          <button
+            type="button"
+            className="shelf-nav-btn shelf-nav-left"
+            onClick={() => handleScrollShelf(-200)}
+            title="Scroll effects left"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft size={14} />
+          </button>
+
+          <div 
+            className={`effect-shelf-bar ${isDraggingShelf ? 'is-dragging' : ''}`}
+            ref={shelfRef}
+            onWheel={handleShelfWheel}
+            onMouseDown={handleShelfMouseDown}
+            onMouseMove={handleShelfMouseMove}
+            onMouseUp={handleShelfMouseUp}
+            onMouseLeave={handleShelfMouseUp}
+          >
+            {filteredEffects.map((eff) => {
+              const isActive = eff.id === activeEffect.id;
+              return (
+                <button
+                  key={eff.id}
+                  ref={isActive ? activeChipRef : null}
+                  className={`effect-chip ${isActive ? 'active' : ''}`}
+                  onClick={() => onSelectEffect(eff.id)}
+                >
+                  <Layers size={11} />
+                  <span>{eff.name || eff.id}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className="shelf-nav-btn shelf-nav-right"
+            onClick={() => handleScrollShelf(200)}
+            title="Scroll effects right"
+            aria-label="Scroll right"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
       )}
 
